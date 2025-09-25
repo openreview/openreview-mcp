@@ -30,14 +30,14 @@ def get_openreview_functions() -> List[Dict[str, Any]]:
             "name": "Client",
             "docstring": "Initialize an OpenReview client for API interactions.",
             "module": "openreview",
-            "signature": "Client(baseurl='https://api.openreview.net', username=None, password=None)",
+            "signature": "Client(baseurl='https://api2.openreview.net', username=None, password=None)",
             "type": "constructor"
         },
         {
             "name": "get_notes",
             "docstring": "Retrieve notes/papers from OpenReview with optional filtering.",
             "module": "openreview.api",
-            "signature": "get_notes(invitation=None, limit=None, offset=None)",
+            "signature": "get_notes(id=None, invitation=None, limit=None, offset=None)",
             "type": "function"
         },
         {
