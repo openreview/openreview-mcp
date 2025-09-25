@@ -22,7 +22,7 @@ This MCP server provides **read-only access** to the `openreview-py` library's s
 
 1. **Clone and navigate to the project:**
 ```bash
-cd openreview-py-mcp
+cd openreview-mcp
 ```
 
 2. **Install dependencies:**
@@ -100,7 +100,7 @@ Get detailed information about a specific function.
 ## 📁 Project Structure
 
 ```
-openreview-py-mcp/
+openreview-mcp/
 ├── src/
 │   ├── server.py          # FastMCP server implementation
 │   ├── introspect.py      # Library introspection utilities
@@ -225,9 +225,9 @@ Configure the server in your Claude Desktop MCP settings:
 ```json
 {
   "mcpServers": {
-    "openreview-py": {
+    "openreview": {
       "command": "uv",
-      "args": ["run", "python", "/path/to/openreview-py-mcp/src/server.py"],
+      "args": ["run", "python", "/path/to/openreview-mcp/src/server.py"],
       "host": "localhost",
       "port": 4000
     }
