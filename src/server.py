@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 from fastmcp import FastMCP
 
-from .introspect import (
+from src.introspect import (
     get_openreview_functions,
     get_openreview_classes, 
     search_openreview_functions,
