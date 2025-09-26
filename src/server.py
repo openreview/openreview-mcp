@@ -362,7 +362,7 @@ def main():
     try:
         # Set base path to root instead of /mcp
         logger.info(f"Starting HTTP server on {host}:{port}...")
-        mcp.run(transport="http", host=host, port=port, path="/")
+        mcp.run(transport="http", host=host, port=port)
     except Exception as e:
         logger.critical(f"Failed to start server: {str(e)}", exc_info=True)
         raise
