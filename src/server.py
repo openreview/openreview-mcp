@@ -9,8 +9,8 @@ from fastmcp import FastMCP, Context
 from fastmcp.utilities.logging import get_logger
 
 from src.introspect import (
-    get_openreview_functions,
     get_openreview_classes, 
+    get_openreview_functions,
     search_openreview_functions,
     get_library_overview
 )
