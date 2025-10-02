@@ -445,10 +445,13 @@ def main():
     port = int(os.environ.get("MCP_PORT", "4000"))
     
     logger.info(f"Server configured with host={host}, port={port}")
-    
+
     try:
         logger.info(f"Starting HTTP server on {host}:{port}...")
         mcp.run(transport="http", host=host, port=port)
+    except KeyboardInterrupt:
+        logger.info("Server shutdown requested by user")
+        print("\nServer stopped gracefully.")
     except Exception as e:
         logger.critical(f"Failed to start server: {str(e)}", exc_info=True)
         raise
