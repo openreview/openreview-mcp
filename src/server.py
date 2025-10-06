@@ -593,7 +593,7 @@ def main():
 
     try:
         logger.info(f"Starting HTTP server on {host}:{port}...")
-        mcp.run(transport="http", host=host, port=port)
+        mcp.run(transport="http", host=host, port=port, path="/mcp")
     except KeyboardInterrupt:
         logger.info("Server shutdown requested by user")
         print("\nServer stopped gracefully.")
