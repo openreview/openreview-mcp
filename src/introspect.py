@@ -876,13 +876,14 @@ def search_openreview_functions(query: str) -> List[Dict[str, Any]]:
 def get_library_overview() -> Dict[str, Any]:
     """
     Get a comprehensive overview of the openreview-py library.
-    
+
     Returns a dictionary with:
     - functions: All available functions
-    - classes: All available classes  
+    - classes: All available classes
     - modules: Module structure
     - statistics: Counts and metadata
-    
+    - api_versions: Information about API 1 vs API 2
+
     TODO: Implement comprehensive analysis:
     1. Module dependency mapping
     2. API endpoint coverage
@@ -892,13 +893,13 @@ def get_library_overview() -> Dict[str, Any]:
     """
     functions = get_openreview_functions()
     classes = get_openreview_classes()
-    
+
     return {
         "functions": functions,
         "classes": classes,
         "modules": [
             "openreview",
-            "openreview.api", 
+            "openreview.api",
             "openreview.tools",
             "openreview.venue"
         ],
@@ -906,6 +907,19 @@ def get_library_overview() -> Dict[str, Any]:
             "total_functions": len(functions),
             "total_classes": len(classes),
             "total_modules": 4
+        },
+        "api_versions": {
+            "api_1": {
+                "client_class": "openreview.Client",
+                "baseurl": "https://api.openreview.net",
+                "description": "Legacy API for older venues"
+            },
+            "api_2": {
+                "client_class": "openreview.api.OpenReviewClient",
+                "baseurl": "https://api2.openreview.net",
+                "description": "Current API (preferred) - documented in this overview"
+            },
+            "important_note": "Use get_api_version_guide tool for detailed guidance on which API to use"
         },
         "version": "unknown",  # TODO: Extract from package
         "last_updated": "2024-01-01"  # TODO: Get real timestamp

@@ -394,6 +394,150 @@ async def get_function_details(function_name: str, ctx: Context) -> Dict[str, An
         raise
 
 
+@mcp.tool()
+async def get_api_version_guide(ctx: Context) -> Dict[str, Any]:
+    """
+    Get comprehensive guidance on OpenReview API versions (API 1 vs API 2).
+
+    This tool provides critical information about which API version and client to use
+    for different operations and venues in OpenReview.
+
+    Returns:
+        Complete guide on API version differences, client instantiation, and decision logic
+    """
+    logger.info("Retrieving API version guidance")
+    await ctx.info("Providing OpenReview API version guidance")
+
+    guide = {
+        "summary": "OpenReview has two API versions with different clients, base URLs, and data schemas",
+
+        "api_versions": {
+            "api_1": {
+                "client_class": "openreview.Client",
+                "baseurl": "https://api.openreview.net",
+                "description": "Legacy API, used for older venues and some current operations",
+                "instantiation_example": "client = openreview.Client(baseurl='https://api.openreview.net', username='user', password='pass')"
+            },
+            "api_2": {
+                "client_class": "openreview.api.OpenReviewClient",
+                "baseurl": "https://api2.openreview.net",
+                "description": "Current API, preferred for new venues and most operations",
+                "instantiation_example": "client = openreview.api.OpenReviewClient(baseurl='https://api2.openreview.net', username='user', password='pass')"
+            }
+        },
+
+        "key_differences": {
+            "data_storage": "New data is usually stored in API 2",
+            "schemas": "Notes, invitations, groups, edges, and tags have slightly different schemas between versions",
+            "compatibility": "API 2 client can retrieve groups from both APIs, but API 1 client is limited to API 1"
+        },
+
+        "decision_logic": {
+            "venue_request_forms": {
+                "description": "Special documents related to venue setup and configuration",
+                "identifier": "Check if invitation field starts with 'OpenReview.net/Support/-/'",
+                "api_to_use": "These are ALWAYS in API 1",
+                "client": "openreview.Client",
+                "note": "This is the ONLY exception - venue request forms are always API 1 regardless of venue API version"
+            },
+
+            "determining_venue_api": {
+                "description": "How to determine if a venue uses API 1 or API 2",
+                "method": "Retrieve the venue root group (domain group) using API 2 client",
+                "steps": [
+                    "1. Instantiate an openreview.api.OpenReviewClient with baseurl='https://api2.openreview.net'",
+                    "2. Use client.get_group(venue_id) to retrieve the venue root group",
+                    "3. Check if the returned group has a 'domain' property",
+                    "4. If 'domain' property exists: venue is API 2 - use openreview.api.OpenReviewClient for ALL venue data",
+                    "5. If 'domain' property does NOT exist: venue is API 1 - use openreview.Client for ALL venue data"
+                ],
+                "example": """
+import openreview
+
+# Always start with API 2 client to check
+api2_client = openreview.api.OpenReviewClient(baseurl='https://api2.openreview.net')
+group = api2_client.get_group('Conference.com/2024')
+
+if hasattr(group, 'domain') and group.domain:
+    # API 2 venue - continue using api2_client
+    notes = api2_client.get_notes(invitation='Conference.com/2024/-/Submission')
+else:
+    # API 1 venue - switch to API 1 client
+    api1_client = openreview.Client(baseurl='https://api.openreview.net')
+    notes = api1_client.get_notes(invitation='Conference.com/2024/-/Submission')
+"""
+            },
+
+            "profiles": {
+                "description": "User profiles can be accessed from either API",
+                "recommendation": "ALWAYS prefer API 2 (openreview.api.OpenReviewClient) unless there's a specific reason to use API 1",
+                "api_to_use": "API 2",
+                "client": "openreview.api.OpenReviewClient",
+                "baseurl": "https://api2.openreview.net",
+                "note": "Profiles are accessible from both APIs but API 2 is the standard"
+            },
+
+            "general_operations": {
+                "search": "Use API 2 by default",
+                "new_venues": "Always API 2",
+                "legacy_venues": "Determine using domain group check method above",
+                "cross_api_queries": "API 2 client can retrieve groups from both APIs"
+            }
+        },
+
+        "common_mistakes": {
+            "mistake_1": {
+                "error": "Using wrong API client for venue operations",
+                "consequence": "Data not found or incorrect schema errors",
+                "solution": "Always check venue's domain group first to determine correct API"
+            },
+            "mistake_2": {
+                "error": "Assuming all venues are in API 2",
+                "consequence": "Missing data from API 1 venues",
+                "solution": "Use the domain property check method"
+            },
+            "mistake_3": {
+                "error": "Using API 2 client for venue request forms",
+                "consequence": "Cannot access venue request form data",
+                "solution": "Venue request forms (invitation starts with 'OpenReview.net/Support/-/') are ALWAYS API 1"
+            },
+            "mistake_4": {
+                "error": "Using API 1 client for profiles",
+                "consequence": "Unnecessary complexity",
+                "solution": "Always use API 2 for profiles unless specifically required otherwise"
+            }
+        },
+
+        "best_practices": [
+            "1. Default to API 2 (openreview.api.OpenReviewClient) for all new code",
+            "2. For venue operations: Always check domain group first to determine API version",
+            "3. Remember: Venue request forms are ALWAYS API 1, regardless of venue API",
+            "4. When in doubt, use API 2 - it can access data from both APIs",
+            "5. Document which API version you're using in your code comments",
+            "6. Test with both API versions if supporting legacy venues"
+        ],
+
+        "quick_reference": {
+            "use_api_2_for": [
+                "New venues",
+                "User profiles (default)",
+                "General searches",
+                "When venue domain group has 'domain' property"
+            ],
+            "use_api_1_for": [
+                "Legacy venues (domain group lacks 'domain' property)",
+                "Venue request forms (invitation starts with 'OpenReview.net/Support/-/')",
+                "Specific API 1 operations when explicitly required"
+            ]
+        }
+    }
+
+    logger.info("API version guidance provided")
+    await ctx.info("API version guidance retrieved successfully")
+
+    return guide
+
+
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check():
     """Health check endpoint for monitoring server availability."""
@@ -431,8 +575,9 @@ def main():
     print("Starting OpenReview Python Library MCP Server (HTTP mode)...")
     print("Available tools:")
     print("- get_server_capabilities: Get available tools and capabilities")
+    print("- get_api_version_guide: Get guidance on API 1 vs API 2 (IMPORTANT!)")
     print("- list_openreview_functions: List all available functions")
-    print("- list_openreview_classes: List all available classes") 
+    print("- list_openreview_classes: List all available classes")
     print("- search_openreview_api: Search functions by keyword")
     print("- get_openreview_overview: Get library overview")
     print("- get_function_details: Get detailed function information")
