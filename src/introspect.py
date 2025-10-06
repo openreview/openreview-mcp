@@ -1244,22 +1244,72 @@ def get_openreview_classes() -> List[Dict[str, Any]]:
             ]
         },
         {
-            "name": "LogRetry",
-            "docstring": "Custom retry class for logging retry attempts",
+            "name": "Profile",
+            "docstring": """Represents a user profile in OpenReview.
+
+    :param id: Profile id (typically in format ~FirstName_LastName1)
+    :type id: str, optional
+    :param active: If true, the Profile is active in OpenReview
+    :type active: bool, optional
+    :param password: If true, the Profile has a password set
+    :type password: bool, optional
+    :param number: Profile number
+    :type number: int, optional
+    :param tcdate: True creation date timestamp
+    :type tcdate: int, optional
+    :param tmdate: True modification date timestamp
+    :type tmdate: int, optional
+    :param referent: If this is a reference profile, it contains the Profile id that it points to
+    :type referent: str, optional
+    :param packaging: Contains previous versions of this Profile
+    :type packaging: dict, optional
+    :param invitation: Invitation id (defaults to ~/-/profiles)
+    :type invitation: str, optional
+    :param readers: List of readers, each reader is a Group id
+    :type readers: list[str], optional
+    :param nonreaders: List of nonreaders, each nonreader is a Group id
+    :type nonreaders: list[str], optional
+    :param signatures: List of signatures, each signature is a Group id
+    :type signatures: list[str], optional
+    :param writers: List of writers, each writer is a Group id
+    :type writers: list[str], optional
+    :param content: Dictionary containing the profile information (names, emails, history, relations, expertise, etc.)
+    :type content: dict, optional
+    :param metaContent: Contains information about entities that have modified the Profile
+    :type metaContent: dict, optional
+    :param tauthor: True author
+    :type tauthor: str, optional
+    :param state: Profile state
+    :type state: str, optional""",
             "module": "openreview.api",
             "methods": [
                 {
                     "name": "__init__",
-                    "signature": "__init__(*args, **kwargs)",
-                    "docstring": "Initialize LogRetry"
+                    "signature": "__init__(id=None, active=None, password=None, number=None, tcdate=None, tmdate=None, referent=None, packaging=None, invitation=None, readers=None, nonreaders=None, signatures=None, writers=None, content=None, metaContent=None, tauthor=None, state=None)",
+                    "docstring": "Initialize a Profile object"
                 },
                 {
-                    "name": "increment",
-                    "signature": "increment(method=None, url=None, response=None, error=None, _pool=None, _stacktrace=None)",
-                    "docstring": "Log retry information before calling the parent class method"
+                    "name": "get_preferred_name",
+                    "signature": "get_preferred_name(pretty=False)",
+                    "docstring": "Get the preferred username from profile names, optionally formatted as pretty name"
+                },
+                {
+                    "name": "get_preferred_email",
+                    "signature": "get_preferred_email()",
+                    "docstring": "Get the preferred email address from profile, checking preferredEmail, emailsConfirmed, then emails"
+                },
+                {
+                    "name": "to_json",
+                    "signature": "to_json()",
+                    "docstring": "Converts Profile instance to a dictionary. The instance variable names are the keys and their values the values of the dictionary."
+                },
+                {
+                    "name": "from_json",
+                    "signature": "from_json(n)",
+                    "docstring": "Creates a Profile object from a dictionary that contains keys values equivalent to the name of the instance variables of the Profile class"
                 }
             ]
-        }
+        },
     ]
     
     return classes
