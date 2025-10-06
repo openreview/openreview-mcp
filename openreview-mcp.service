@@ -1,0 +1,23 @@
+[Unit]
+Description=OpenReview MCP Server
+After=network.target
+
+[Service]
+Type=simple
+User=your-username
+WorkingDirectory=/path/to/openreview-mcp
+Environment="PATH=/path/to/openreview-mcp/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="MCP_HOST=0.0.0.0"
+Environment="MCP_PORT=3000"
+ExecStart=/path/to/openreview-mcp/.venv/bin/python -m src.server
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/openreview-mcp/stdout.log
+StandardError=append:/var/log/openreview-mcp/stderr.log
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
