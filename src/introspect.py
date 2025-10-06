@@ -68,8 +68,250 @@ def get_openreview_classes() -> List[Dict[str, Any]]:
     - module: Module path
     - methods: List of public methods with their signatures
     """
-    # Classes from client.py
+    # Classes from both API 1 (openreview.Client) and API 2 (openreview.api.OpenReviewClient)
     classes = [
+        {
+            "name": "Client",
+            "docstring": """Client for API 1 interactions (Legacy API).
+
+            :param baseurl: URL to the host, example: https://api.openreview.net. If none is provided, it defaults to the environment variable `OPENREVIEW_API_BASEURL`
+            :type baseurl: str, optional
+            :param username: OpenReview username. If none is provided, it defaults to the environment variable `OPENREVIEW_USERNAME`
+            :type username: str, optional
+            :param password: OpenReview password. If none is provided, it defaults to the environment variable `OPENREVIEW_PASSWORD`
+            :type password: str, optional
+            :param token: Session token. This token can be provided instead of the username and password if the user had already logged in
+            :type token: str, optional
+            """,
+            "module": "openreview",
+            "methods": [
+                {
+                    "name": "__init__",
+                    "signature": "__init__(baseurl=None, username=None, password=None, token=None)",
+                    "docstring": "Initialize the OpenReview API 1 client"
+                },
+                {
+                    "name": "impersonate",
+                    "signature": "impersonate(group_id)",
+                    "docstring": "Impersonate a group"
+                },
+                {
+                    "name": "login_user",
+                    "signature": "login_user(username=None, password=None)",
+                    "docstring": "Logs in a registered user"
+                },
+                {
+                    "name": "get_group",
+                    "signature": "get_group(id)",
+                    "docstring": "Get a single Group by id if available"
+                },
+                {
+                    "name": "get_invitation",
+                    "signature": "get_invitation(id)",
+                    "docstring": "Get a single invitation by id if available"
+                },
+                {
+                    "name": "get_note",
+                    "signature": "get_note(id)",
+                    "docstring": "Get a single Note by id if available"
+                },
+                {
+                    "name": "get_tag",
+                    "signature": "get_tag(id)",
+                    "docstring": "Get a single Tag by id if available"
+                },
+                {
+                    "name": "get_edge",
+                    "signature": "get_edge(id)",
+                    "docstring": "Get a single Edge by id if available"
+                },
+                {
+                    "name": "get_profile",
+                    "signature": "get_profile(email_or_id=None)",
+                    "docstring": "Get a single Profile by id, if available"
+                },
+                {
+                    "name": "get_profiles",
+                    "signature": "get_profiles(ids=None, emails=None)",
+                    "docstring": "Get a list of Profiles by ids or emails"
+                },
+                {
+                    "name": "search_profiles",
+                    "signature": "search_profiles(confirmedEmails=None, emails=None, ids=None, term=None, first=None, middle=None, last=None, fullname=None)",
+                    "docstring": "Gets a list of profiles using either their ids or corresponding emails"
+                },
+                {
+                    "name": "get_pdf",
+                    "signature": "get_pdf(id, is_reference=False)",
+                    "docstring": "Gets the binary content of a pdf using the provided note/reference id"
+                },
+                {
+                    "name": "get_attachment",
+                    "signature": "get_attachment(id, field_name)",
+                    "docstring": "Gets the binary content of an attachment using the provided note id"
+                },
+                {
+                    "name": "get_venues",
+                    "signature": "get_venues(id=None, ids=None, invitations=None)",
+                    "docstring": "Gets list of Note objects based on the filters provided"
+                },
+                {
+                    "name": "put_attachment",
+                    "signature": "put_attachment(file, invitation, name)",
+                    "docstring": "Uploads a file to the openreview server"
+                },
+                {
+                    "name": "post_profile",
+                    "signature": "post_profile(profile)",
+                    "docstring": "Updates a Profile"
+                },
+                {
+                    "name": "get_groups",
+                    "signature": "get_groups(id=None, regex=None, member=None, host=None, signatory=None, web=None, limit=None, offset=None, with_count=None, sort=None, stream=False)",
+                    "docstring": "Gets list of Group objects based on the filters provided"
+                },
+                {
+                    "name": "get_all_groups",
+                    "signature": "get_all_groups(id=None, regex=None, member=None, host=None, signatory=None, web=None, with_count=None, sort=None)",
+                    "docstring": "Gets list of Group objects based on the filters provided"
+                },
+                {
+                    "name": "get_invitations",
+                    "signature": "get_invitations(id=None, ids=None, invitee=None, replytoNote=None, replyForum=None, signature=None, note=None, regex=None, tags=None, limit=None, offset=None, minduedate=None, duedate=None, pastdue=None, replyto=None, details=None, expired=None, sort=None, type=None, with_count=None)",
+                    "docstring": "Gets list of Invitation objects based on the filters provided"
+                },
+                {
+                    "name": "get_all_invitations",
+                    "signature": "get_all_invitations(id=None, ids=None, invitee=None, replytoNote=None, replyForum=None, signature=None, note=None, regex=None, tags=None, minduedate=None, duedate=None, pastdue=None, replyto=None, details=None, expired=None, sort=None, type=None, with_count=None)",
+                    "docstring": "Gets list of Invitation objects based on the filters provided"
+                },
+                {
+                    "name": "get_notes",
+                    "signature": "get_notes(id=None, paperhash=None, forum=None, invitation=None, replyto=None, tauthor=None, signature=None, writer=None, trash=None, number=None, content=None, limit=None, offset=None, mintcdate=None, details=None, sort=None, with_count=None)",
+                    "docstring": "Gets list of Note objects based on the filters provided"
+                },
+                {
+                    "name": "get_all_notes",
+                    "signature": "get_all_notes(id=None, paperhash=None, forum=None, invitation=None, replyto=None, tauthor=None, signature=None, writer=None, trash=None, number=None, content=None, mintcdate=None, details=None, sort=None, with_count=None)",
+                    "docstring": "Gets list of Note objects based on the filters provided"
+                },
+                {
+                    "name": "post_tag",
+                    "signature": "post_tag(tag)",
+                    "docstring": "Posts the tag"
+                },
+                {
+                    "name": "post_tags",
+                    "signature": "post_tags(tags)",
+                    "docstring": "Posts the list of Tags"
+                },
+                {
+                    "name": "get_tags",
+                    "signature": "get_tags(id=None, invitation=None, forum=None, signature=None, tag=None, limit=None, offset=None, with_count=None)",
+                    "docstring": "Gets a list of Tag objects based on the filters provided"
+                },
+                {
+                    "name": "get_all_tags",
+                    "signature": "get_all_tags(id=None, invitation=None, forum=None, signature=None, tag=None, limit=None, offset=None, with_count=None)",
+                    "docstring": "Gets a list of Tag objects based on the filters provided"
+                },
+                {
+                    "name": "get_edges",
+                    "signature": "get_edges(id=None, invitation=None, head=None, tail=None, label=None, limit=None, offset=None, with_count=None, trash=None)",
+                    "docstring": "Returns a list of Edge objects based on the filters provided"
+                },
+                {
+                    "name": "get_all_edges",
+                    "signature": "get_all_edges(id=None, invitation=None, head=None, tail=None, label=None, limit=None, offset=None, with_count=None, trash=None)",
+                    "docstring": "Returns a list of Edge objects based on the filters provided"
+                },
+                {
+                    "name": "get_edges_count",
+                    "signature": "get_edges_count(id=None, invitation=None, head=None, tail=None, label=None)",
+                    "docstring": "Returns edge count based on the filters provided"
+                },
+                {
+                    "name": "get_grouped_edges",
+                    "signature": "get_grouped_edges(invitation=None, head=None, tail=None, label=None, groupby='head', select=None, limit=None, offset=None)",
+                    "docstring": "Returns a list of JSON objects where each one represents a group of edges"
+                },
+                {
+                    "name": "get_archived_edges",
+                    "signature": "get_archived_edges(invitation)",
+                    "docstring": "Returns a list of Edge objects based on the filters provided"
+                },
+                {
+                    "name": "post_edge",
+                    "signature": "post_edge(edge)",
+                    "docstring": "Posts the edge"
+                },
+                {
+                    "name": "post_edges",
+                    "signature": "post_edges(edges)",
+                    "docstring": "Posts the list of Edges"
+                },
+                {
+                    "name": "delete_edges",
+                    "signature": "delete_edges(invitation, label=None, head=None, tail=None, wait_to_finish=False)",
+                    "docstring": "Deletes edges by a combination of invitation id and optional filters"
+                },
+                {
+                    "name": "delete_tags",
+                    "signature": "delete_tags(invitation, tag=None, wait_to_finish=False)",
+                    "docstring": "Deletes tags by a combination of invitation id and optional filters"
+                },
+                {
+                    "name": "delete_note",
+                    "signature": "delete_note(note_id)",
+                    "docstring": "Deletes the note"
+                },
+                {
+                    "name": "delete_profile_reference",
+                    "signature": "delete_profile_reference(reference_id)",
+                    "docstring": "Deletes the Profile Reference specified by reference_id"
+                },
+                {
+                    "name": "delete_group",
+                    "signature": "delete_group(group_id)",
+                    "docstring": "Deletes the group"
+                },
+                {
+                    "name": "post_message",
+                    "signature": "post_message(subject, recipients, message, invitation=None, signature=None, ignoreRecipients=None, sender=None, replyTo=None, parentGroup=None)",
+                    "docstring": "Posts a message to the recipients and consequently sends them emails"
+                },
+                {
+                    "name": "add_members_to_group",
+                    "signature": "add_members_to_group(group, members)",
+                    "docstring": "Adds members to a group"
+                },
+                {
+                    "name": "remove_members_from_group",
+                    "signature": "remove_members_from_group(group, members)",
+                    "docstring": "Removes members from a group"
+                },
+                {
+                    "name": "search_notes",
+                    "signature": "search_notes(term, content='all', group='all', source='all', limit=None, offset=None)",
+                    "docstring": "Searches notes based on term, content, group and source as the criteria"
+                },
+                {
+                    "name": "get_notes_by_ids",
+                    "signature": "get_notes_by_ids(ids)",
+                    "docstring": "Get notes by their IDs"
+                },
+                {
+                    "name": "get_messages",
+                    "signature": "get_messages(to=None, subject=None, status=None, offset=None, limit=None)",
+                    "docstring": "Retrieves all the messages sent to a list of usernames or emails"
+                },
+                {
+                    "name": "get_process_logs",
+                    "signature": "get_process_logs(id=None, invitation=None, status=None)",
+                    "docstring": "Retrieves the logs of the process function executed by an Invitation"
+                },
+            ]
+        },
         {
             "name": "OpenReviewClient",
             "docstring": """OpenReviewClient for API interactions.
@@ -555,30 +797,79 @@ def get_openreview_classes() -> List[Dict[str, Any]]:
             ]
         },
         {
-            "name": "Note",
-            "docstring": "Represents a note in OpenReview",
-            "module": "openreview.api",
-            "methods": [
-                {
-                    "name": "__init__",
-                    "signature": "__init__(invitations=None, parent_invitations=None, readers=None, writers=None, signatures=None, content=None, id=None, number=None, cdate=None, pdate=None, odate=None, mdate=None, tcdate=None, tmdate=None, ddate=None, forum=None, replyto=None, nonreaders=None, domain=None, details=None, license=None)",
-                    "docstring": "Initialize a Note object"
-                },
-                {
-                    "name": "to_json",
-                    "signature": "to_json()",
-                    "docstring": "Converts Note instance to a dictionary. The instance variable names are the keys and their values the values of the dictinary."
-                },
-                {
-                    "name": "from_json",
-                    "signature": "from_json(n)",
-                    "docstring": "Creates a Note object from a dictionary that contains keys values equivalent to the name of the instance variables of the Note class"
-                }
-            ]
-        },
-        {
             "name": "Invitation",
-            "docstring": "Represents an invitation in OpenReview",
+            "docstring": """Represents an invitation in OpenReview.
+
+    :param id: Invitation id
+    :type id: str, optional
+    :param invitations: Invitation ids that apply to this Invitation
+    :type invitations: list[str], optional
+    :param parent_invitations: Parent invitation ids
+    :type parent_invitations: list[str], optional
+    :param domain: Domain for the Invitation
+    :type domain: str, optional
+    :param readers: List of readers in the Invitation, each reader is a Group id
+    :type readers: list[str], optional
+    :param writers: List of writers in the Invitation, each writer is a Group id
+    :type writers: list[str], optional
+    :param invitees: List of invitees in the Invitation, each invitee is a Group id
+    :type invitees: list[str], optional
+    :param signatures: List of signatures in the Invitation, each signature is a Group id
+    :type signatures: list[str], optional
+    :param edit: Edit template configuration
+    :type edit: dict, optional
+    :param edge: Edge template configuration (type='Edge')
+    :type edge: dict, optional
+    :param tag: Tag template configuration (type='Tag')
+    :type tag: dict, optional
+    :param message: Message template configuration (type='Message')
+    :type message: dict, optional
+    :param type: Type of invitation (Note, Edge, Tag, or Message)
+    :type type: str, default='Note'
+    :param noninvitees: List of noninvitees in the Invitation, each noninvitee is a Group id
+    :type noninvitees: list[str], optional
+    :param nonreaders: List of nonreaders in the Invitation, each nonreader is a Group id
+    :type nonreaders: list[str], optional
+    :param web: Web interface configuration
+    :type web: str, optional
+    :param process: Process function
+    :type process: str, optional
+    :param preprocess: Preprocess function
+    :type preprocess: str, optional
+    :param date_processes: Date-based process functions
+    :type date_processes: list, optional
+    :param post_processes: Post-process functions
+    :type post_processes: list, optional
+    :param duedate: Due date timestamp
+    :type duedate: int, optional
+    :param expdate: Expiration date timestamp
+    :type expdate: int, optional
+    :param cdate: Creation date timestamp
+    :type cdate: int, optional
+    :param ddate: Deletion date timestamp
+    :type ddate: int, optional
+    :param tcdate: True creation date timestamp
+    :type tcdate: int, optional
+    :param tmdate: True modification date timestamp
+    :type tmdate: int, optional
+    :param minReplies: Minimum number of replies
+    :type minReplies: int, optional
+    :param maxReplies: Maximum number of replies
+    :type maxReplies: int, optional
+    :param bulk: Bulk operation flag
+    :type bulk: bool, optional
+    :param content: Content schema/configuration
+    :type content: dict, optional
+    :param reply_forum_views: Reply forum views configuration
+    :type reply_forum_views: list, default=[]
+    :param responseArchiveDate: Response archive date timestamp
+    :type responseArchiveDate: int, optional
+    :param details: Additional details
+    :type details: dict, optional
+    :param description: Description text
+    :type description: str, optional
+    :param instructions: Instructions text
+    :type instructions: str, optional""",
             "module": "openreview.api",
             "methods": [
                 {
@@ -589,7 +880,7 @@ def get_openreview_classes() -> List[Dict[str, Any]]:
                 {
                     "name": "to_json",
                     "signature": "to_json()",
-                    "docstring": "Converts Invitation instance to a dictionary. The instance variable names are the keys and their values the values of the dictinary."
+                    "docstring": "Converts Invitation instance to a dictionary. The instance variable names are the keys and their values the values of the dictionary."
                 },
                 {
                     "name": "from_json",
@@ -599,7 +890,12 @@ def get_openreview_classes() -> List[Dict[str, Any]]:
                 {
                     "name": "is_active",
                     "signature": "is_active()",
-                    "docstring": "Check if the invitation is currently active"
+                    "docstring": "Check if the invitation is currently active (based on cdate, expdate, and current time)"
+                },
+                {
+                    "name": "get_content_value",
+                    "signature": "get_content_value(field_name, default_value=None)",
+                    "docstring": "Get a content field value by name, with optional default value"
                 },
                 {
                     "name": "pretty_id",
@@ -609,37 +905,122 @@ def get_openreview_classes() -> List[Dict[str, Any]]:
             ]
         },
         {
+            "name": "Note",
+            "docstring": """Represents a note in OpenReview.
+
+    :param invitations: Invitation ids that apply to this Note
+    :type invitations: list[str], optional
+    :param parent_invitations: Parent invitation ids
+    :type parent_invitations: list[str], optional
+    :param readers: List of readers in the Note, each reader is a Group id
+    :type readers: list[str], optional
+    :param writers: List of writers in the Note, each writer is a Group id
+    :type writers: list[str], optional
+    :param signatures: List of signatures in the Note, each signature is a Group id
+    :type signatures: list[str], optional
+    :param content: Content of the Note
+    :type content: dict, optional
+    :param id: Note id
+    :type id: str, optional
+    :param number: Note number
+    :type number: int, optional
+    :param cdate: Creation date
+    :type cdate: int, optional
+    :param pdate: Publication date
+    :type pdate: int, optional
+    :param odate: Original date
+    :type odate: int, optional
+    :param mdate: Modification date
+    :type mdate: int, optional
+    :param tcdate: True creation date
+    :type tcdate: int, optional
+    :param tmdate: True modification date
+    :type tmdate: int, optional
+    :param ddate: Deletion date
+    :type ddate: int, optional
+    :param forum: Forum id
+    :type forum: str, optional
+    :param replyto: Reply to note id
+    :type replyto: str, optional
+    :param nonreaders: List of nonreaders in the Note, each nonreader is a Group id
+    :type nonreaders: list[str], optional
+    :param domain: Domain for the Note
+    :type domain: str, optional
+    :param details: Additional details
+    :type details: dict, optional
+    :param license: License information
+    :type license: str, optional""",
+            "module": "openreview.api",
+            "methods": [
+                {
+                    "name": "__init__",
+                    "signature": "__init__(invitations=None, parent_invitations=None, readers=None, writers=None, signatures=None, content=None, id=None, number=None, cdate=None, pdate=None, odate=None, mdate=None, tcdate=None, tmdate=None, ddate=None, forum=None, replyto=None, nonreaders=None, domain=None, details=None, license=None)",
+                    "docstring": "Initialize a Note object"
+                },
+                {
+                    "name": "to_json",
+                    "signature": "to_json()",
+                    "docstring": "Converts Note instance to a dictionary. The instance variable names are the keys and their values the values of the dictionary."
+                },
+                {
+                    "name": "from_json",
+                    "signature": "from_json(n)",
+                    "docstring": "Creates a Note object from a dictionary that contains keys values equivalent to the name of the instance variables of the Note class"
+                }
+            ]
+        },
+        {
             "name": "Group",
             "docstring": """When a user is created, it is automatically assigned to certain groups that give him different privileges. A username is also a group, therefore, groups can be members of other groups.
 
     :param id: id of the Group
-    :type id: str
+    :type id: str, optional
+    :param content: Content of the Group
+    :type content: dict, optional
     :param readers: List of readers in the Group, each reader is a Group id
-    :type readers: list[str]
+    :type readers: list[str], optional
     :param writers: List of writers in the Group, each writer is a Group id
-    :type writers: list[str]
-    :param signatories: List of signatories in the Group, each writer is a Group id
-    :type signatories: list[str]
+    :type writers: list[str], optional
+    :param signatories: List of signatories in the Group, each signatory is a Group id
+    :type signatories: list[str], optional
     :param signatures: List of signatures in the Group, each signature is a Group id
-    :type signatures: list[str]
+    :type signatures: list[str], optional
+    :param invitation: Invitation id for this Group
+    :type invitation: str, optional
+    :param invitations: Invitation ids that apply to this Group
+    :type invitations: list[str], optional
+    :param parent_invitations: Parent invitation ids
+    :type parent_invitations: list[str], optional
     :param cdate: Creation date of the Group
     :type cdate: int, optional
     :param ddate: Deletion date of the Group
     :type ddate: int, optional
-    :param tcdate: true creation date of the Group
+    :param tcdate: True creation date of the Group
     :type tcdate: int, optional
-    :param tmdate: true modification date of the Group
+    :param tmdate: True modification date of the Group
     :type tmdate: int, optional
     :param members: List of members in the Group, each member is a Group id
     :type members: list[str], optional
     :param nonreaders: List of nonreaders in the Group, each nonreader is a Group id
     :type nonreaders: list[str], optional
-    :param web: Path to a file that contains the webfield
-    :type web: optional
-    :param web_string: String containing the webfield for this Group
-    :type web_string: str, optional
-    :param details:
-    :type details: optional""",
+    :param impersonators: List of impersonators who can impersonate this Group
+    :type impersonators: list[str], optional
+    :param web: Webfield configuration for the Group
+    :type web: str, optional
+    :param anonids: Anonymous ids configuration
+    :type anonids: bool, optional
+    :param deanonymizers: List of deanonymizers who can reveal anonymous identities
+    :type deanonymizers: list[str], optional
+    :param host: Host URL for the Group
+    :type host: str, optional
+    :param domain: Domain for the Group
+    :type domain: str, optional
+    :param parent: Parent group id
+    :type parent: str, optional
+    :param details: Additional details
+    :type details: dict, optional
+    :param description: Description text
+    :type description: str, optional""",
             "module": "openreview.api",
             "methods": [
                 {
@@ -648,9 +1029,14 @@ def get_openreview_classes() -> List[Dict[str, Any]]:
                     "docstring": "Initialize a Group object"
                 },
                 {
+                    "name": "get_content_value",
+                    "signature": "get_content_value(field_name, default_value=None)",
+                    "docstring": "Get a content field value by name, with optional default value"
+                },
+                {
                     "name": "to_json",
                     "signature": "to_json()",
-                    "docstring": "Converts Group instance to a dictionary. The instance variable names are the keys and their values the values of the dictinary."
+                    "docstring": "Converts Group instance to a dictionary. The instance variable names are the keys and their values the values of the dictionary."
                 },
                 {
                     "name": "from_json",
@@ -660,71 +1046,141 @@ def get_openreview_classes() -> List[Dict[str, Any]]:
                 {
                     "name": "add_member",
                     "signature": "add_member(member)",
-                    "docstring": "Adds a member to the group. This is done only on the object not in OpenReview. Another method like :meth:`~openreview.Group.post` is needed for the change to show in OpenReview"
+                    "docstring": "Adds a member to the group. This is done only on the object not in OpenReview. Another method like post() is needed for the change to show in OpenReview"
                 },
                 {
                     "name": "remove_member",
                     "signature": "remove_member(member)",
-                    "docstring": "Removes a member from the group. This is done only on the object not in OpenReview. Another method like :meth:`~openreview.Group.post` is needed for the change to show in OpenReview"
+                    "docstring": "Removes a member from the group. This is done only on the object not in OpenReview. Another method like post() is needed for the change to show in OpenReview"
+                },
+                {
+                    "name": "add_webfield",
+                    "signature": "add_webfield(web)",
+                    "docstring": "Adds a webfield to the group by reading from a file path"
+                },
+                {
+                    "name": "post",
+                    "signature": "post(client)",
+                    "docstring": "Posts the group to OpenReview using the provided client"
+                },
+                {
+                    "name": "transform_to_anon_ids",
+                    "signature": "transform_to_anon_ids(elements)",
+                    "docstring": "Transforms member ids to anonymous ids if anonids is enabled"
                 }
             ]
         },
         {
             "name": "Edge",
-            "docstring": "Represents an edge between entities in OpenReview",
+            "docstring": """Represents an edge between entities in OpenReview.
+
+    An Edge represents a directed relationship between two entities (head and tail).
+    Commonly used for assignments, conflicts, recommendations, and other relationships.
+
+    :param head: Head of the edge (source entity id)
+    :type head: str, required
+    :param tail: Tail of the edge (target entity id)
+    :type tail: str, required
+    :param invitation: Invitation id for this edge
+    :type invitation: str, required
+    :param domain: Domain for the Edge
+    :type domain: str, optional
+    :param readers: List of readers, each reader is a Group id
+    :type readers: list[str], optional
+    :param writers: List of writers, each writer is a Group id
+    :type writers: list[str], optional
+    :param signatures: List of signatures, each signature is a Group id
+    :type signatures: list[str], optional
+    :param id: Edge id
+    :type id: str, optional
+    :param weight: Weight value for the edge (e.g., score, confidence)
+    :type weight: float, optional
+    :param label: Label for the edge
+    :type label: str, optional
+    :param cdate: Creation date timestamp
+    :type cdate: int, optional
+    :param ddate: Deletion date timestamp
+    :type ddate: int, optional
+    :param nonreaders: List of nonreaders, each nonreader is a Group id
+    :type nonreaders: list[str], optional
+    :param tcdate: True creation date timestamp
+    :type tcdate: int, optional
+    :param tmdate: True modification date timestamp
+    :type tmdate: int, optional
+    :param tddate: True deletion date timestamp
+    :type tddate: int, optional
+    :param tauthor: True author
+    :type tauthor: str, optional""",
             "module": "openreview.api",
             "methods": [
                 {
                     "name": "__init__",
                     "signature": "__init__(head, tail, invitation, domain=None, readers=None, writers=None, signatures=None, id=None, weight=None, label=None, cdate=None, ddate=None, nonreaders=None, tcdate=None, tmdate=None, tddate=None, tauthor=None)",
-                    "docstring": "Initialize an Edge object"
+                    "docstring": "Initialize an Edge object with required head, tail, and invitation parameters"
                 },
                 {
                     "name": "to_json",
                     "signature": "to_json()",
-                    "docstring": "Returns serialized json string for a given object"
+                    "docstring": "Converts Edge instance to a dictionary containing the edge parameters"
                 },
                 {
                     "name": "from_json",
                     "signature": "from_json(e)",
-                    "docstring": "Returns a deserialized object from a json string"
+                    "docstring": "Creates an Edge object from a dictionary that contains keys values equivalent to the name of the instance variables of the Edge class"
                 }
             ]
         },
         {
             "name": "Tag",
-            "docstring": """
+            "docstring": """Represents a tag in OpenReview.
+
+    Tags are used to annotate notes with metadata like decisions, ratings, or custom labels.
+
+    :param invitation: Invitation id (required)
+    :type invitation: str, required
+    :param signature: Signature, typically a Group id
+    :type signature: str, optional
     :param tag: Content of the tag
-    :type tag: str
-    :param invitation: Invitation id
-    :type invitation: str
-    :param readers: List of readers in the Invitation, each reader is a Group id
-    :type readers: list[str]
-    :param signature: Signature in the Invitation, signature is a Group id
-    :type signature: str
+    :type tag: str, optional
+    :param readers: List of readers, each reader is a Group id
+    :type readers: list[str], optional
+    :param writers: List of writers, each writer is a Group id
+    :type writers: list[str], optional
     :param id: Tag id
     :type id: str, optional
-    :param cdate: Creation date
+    :param parent_invitations: Parent invitation ids
+    :type parent_invitations: list[str], optional
+    :param cdate: Creation date timestamp
     :type cdate: int, optional
-    :param tcdate: True creation date
+    :param tcdate: True creation date timestamp
     :type tcdate: int, optional
-    :param ddate: Deletion date
+    :param tmdate: True modification date timestamp
+    :type tmdate: int, optional
+    :param ddate: Deletion date timestamp
     :type ddate: int, optional
-    :param forum: Forum id
+    :param forum: Forum id (typically the note being tagged)
     :type forum: str, optional
-    :param nonreaders: List of nonreaders in the Invitation, each nonreader is a Group id
-    :type nonreaders: list[str], optional""",
+    :param nonreaders: List of nonreaders, each nonreader is a Group id
+    :type nonreaders: list[str], optional
+    :param profile: Profile id
+    :type profile: str, optional
+    :param weight: Weight value for the tag
+    :type weight: float, optional
+    :param label: Label for the tag
+    :type label: str, optional
+    :param note: Note id being tagged
+    :type note: str, optional""",
             "module": "openreview.api",
             "methods": [
                 {
                     "name": "__init__",
                     "signature": "__init__(invitation, signature=None, tag=None, readers=None, writers=None, id=None, parent_invitations=None, cdate=None, tcdate=None, tmdate=None, ddate=None, forum=None, nonreaders=None, profile=None, weight=None, label=None, note=None)",
-                    "docstring": "Initialize a Tag object"
+                    "docstring": "Initialize a Tag object with required invitation parameter"
                 },
                 {
                     "name": "to_json",
                     "signature": "to_json()",
-                    "docstring": "Converts Tag instance to a dictionary. The instance variable names are the keys and their values the values of the dictinary."
+                    "docstring": "Converts Tag instance to a dictionary. The instance variable names are the keys and their values the values of the dictionary."
                 },
                 {
                     "name": "from_json",
@@ -737,27 +1193,37 @@ def get_openreview_classes() -> List[Dict[str, Any]]:
             "name": "Edit",
             "docstring": """
     :param id: Edit id
-    :type id: str
+    :type id: str, optional
+    :param domain: Domain for the Edit
+    :type domain: str, optional
+    :param invitations: Invitation ids that apply to this Edit
+    :type invitations: list[str], optional
     :param readers: List of readers in the Edit, each reader is a Group id
     :type readers: list[str], optional
     :param writers: List of writers in the Edit, each writer is a Group id
     :type writers: list[str], optional
     :param signatures: List of signatures in the Edit, each signature is a Group id
     :type signatures: list[str], optional
+    :param content: Content of the Edit
+    :type content: dict, optional
     :param note: Template of the Note that will be created
-    :type note: dict, optional
-    :param invitation: Template of the Invitation that will be created
-    :type invitation: dict, optional
+    :type note: Note, optional
+    :param group: Template of the Group that will be created
+    :type group: Group, optional
+    :param invitation: Template of the Invitation that will be created (can be Invitation object or string)
+    :type invitation: Invitation or str, optional
     :param nonreaders: List of nonreaders in the Edit, each nonreader is a Group id
     :type nonreaders: list[str], optional
     :param cdate: Creation date
     :type cdate: int, optional
-    :param ddate: Deletion date
-    :type ddate: int, optional
     :param tcdate: True creation date
     :type tcdate: int, optional
-    :param tmdate: Modification date
-    :type tmdate: int, optional""",
+    :param tmdate: True modification date
+    :type tmdate: int, optional
+    :param ddate: Deletion date
+    :type ddate: int, optional
+    :param tauthor: True author
+    :type tauthor: str, optional""",
             "module": "openreview.api",
             "methods": [
                 {
@@ -768,7 +1234,7 @@ def get_openreview_classes() -> List[Dict[str, Any]]:
                 {
                     "name": "to_json",
                     "signature": "to_json()",
-                    "docstring": "Converts Edit instance to a dictionary. The instance variable names are the keys and their values the values of the dictinary."
+                    "docstring": "Converts Edit instance to a dictionary. The instance variable names are the keys and their values the values of the dictionary."
                 },
                 {
                     "name": "from_json",
@@ -868,14 +1334,14 @@ def get_library_overview() -> Dict[str, Any]:
             "api_1": {
                 "client_class": "openreview.Client",
                 "baseurl": "https://api.openreview.net",
-                "description": "Legacy API for older venues"
+                "description": "Legacy API for older venues - documented in this overview"
             },
             "api_2": {
                 "client_class": "openreview.api.OpenReviewClient",
                 "baseurl": "https://api2.openreview.net",
                 "description": "Current API (preferred) - documented in this overview"
             },
-            "important_note": "Use get_api_version_guide tool for detailed guidance on which API to use"
+            "important_note": "Both API 1 and API 2 classes are now documented. Use get_api_version_guide tool for detailed guidance on which API to use"
         },
         "version": "unknown",  # TODO: Extract from package
         "last_updated": "2024-01-01"  # TODO: Get real timestamp
