@@ -1,104 +1,60 @@
-"""Utility module for introspecting the openreview-py library structure."""
+"""Utility module for introspecting the openreview-py library structure.
 
-import inspect
-import importlib
-from typing import Dict, List, Any, Optional
+This module provides functions to extract metadata about the openreview-py library,
+including classes, methods, and functions. The data is statically defined to avoid
+runtime dependencies on the actual openreview-py library.
+
+Data Organization:
+- get_openreview_classes(): Returns class definitions with methods (single source of truth)
+- get_openreview_functions(): Extracts methods from OpenReviewClient class (derived from classes)
+- This approach eliminates duplication and ensures consistency
+"""
+
+from typing import Dict, List, Any
 
 
 def get_openreview_functions() -> List[Dict[str, Any]]:
     """
     Extract function metadata from the openreview-py library.
-    
+
+    This function extracts methods from the OpenReviewClient class definition
+    to avoid duplication. It converts class methods into a function-style format.
+
     Returns a list of dictionaries containing function information:
     - name: Function name
     - docstring: Function docstring
-    - module: Module path
+    - module: Module path (includes class name)
     - signature: Function signature as string
+    - function_type: Always "method" (from OpenReviewClient)
+    - return_type: Return type if available
     """
-    # Extract functions from the OpenReviewClient class methods
-    functions = [
-        {
-            "name": "get_note",
-            "docstring": "Get a single Note by id if available",
-            "module": "openreview.api.OpenReviewClient",
-            "signature": "get_note(id, details=None)",
+    # Get all classes and find OpenReviewClient
+    classes = get_openreview_classes()
+    client_class = next((c for c in classes if c["name"] == "OpenReviewClient"), None)
+
+    if not client_class:
+        return []
+
+    # Convert class methods to function format
+    # Add 'module' field to include the class name and 'function_type' field
+    functions = []
+    for method in client_class.get("methods", []):
+        # Skip private methods and __init__
+        if method["name"].startswith("_"):
+            continue
+
+        # Create function entry with additional metadata
+        function = {
+            "name": method["name"],
+            "docstring": method.get("docstring", ""),
+            "module": f"{client_class['module']}.{client_class['name']}",
+            "signature": method["signature"],
             "function_type": "method",
-            "return_type": "openreview.api.Note"
-        },
-        {
-            "name": "get_notes",
-            "docstring": "Gets list of Note objects based on the filters provided. The Notes that will be returned match all the criteria passed in the parameters.",
-            "module": "openreview.api.OpenReviewClient",
-            "signature": "get_notes(id=None, paperhash=None, forum=None, invitation=None, parent_invitations=None, replyto=None, tauthor=None, signature=None, transitive_members=None, signatures=None, writer=None, trash=None, number=None, content=None, limit=None, offset=None, after=None, mintcdate=None, domain=None, details=None, sort=None, with_count=None, stream=None)",
-            "function_type": "method",
-            "return_type": "List[openreview.api.Note]"
-        },
-        {
-            "name": "post_note_edit",
-            "docstring": "Posts a note edit",
-            "module": "openreview.api.OpenReviewClient",
-            "signature": "post_note_edit(invitation, signatures, note=None, readers=None, writers=None, nonreaders=None, content=None, await_process=False)",
-            "function_type": "method",
-            "return_type": "Dict"
-        },
-        {
-            "name": "get_group",
-            "docstring": "Get a single Group by id if available",
-            "module": "openreview.api.OpenReviewClient",
-            "signature": "get_group(id, details=None)",
-            "function_type": "method",
-            "return_type": "openreview.api.Group"
-        },
-        {
-            "name": "get_invitation",
-            "docstring": "Get a single invitation by id if available",
-            "module": "openreview.api.OpenReviewClient",
-            "signature": "get_invitation(id)",
-            "function_type": "method",
-            "return_type": "openreview.api.Invitation"
-        },
-        {
-            "name": "search_notes",
-            "docstring": "Searches notes based on term, content, group and source as the criteria. Unlike get_notes, this method uses Elasticsearch to retrieve the Notes",
-            "module": "openreview.api.OpenReviewClient",
-            "signature": "search_notes(term, content='all', group='all', source='all', limit=None, offset=None)",
-            "function_type": "method",
-            "return_type": "List[openreview.api.Note]"
-        },
-        {
-            "name": "get_profile",
-            "docstring": "Get a single Profile by id, if available",
-            "module": "openreview.api.OpenReviewClient",
-            "signature": "get_profile(email_or_id=None)",
-            "function_type": "method",
-            "return_type": "Dict"
-        },
-        {
-            "name": "post_message",
-            "docstring": "Posts a message to the recipients and consequently sends them emails",
-            "module": "openreview.api.OpenReviewClient",
-            "signature": "post_message(subject, recipients, message, invitation=None, signature=None, ignoreRecipients=None, sender=None, replyTo=None, parentGroup=None, use_job=None)",
-            "function_type": "method",
-            "return_type": "Dict"
-        },
-        {
-            "name": "login_user",
-            "docstring": "Logs in a registered user",
-            "module": "openreview.api.OpenReviewClient",
-            "signature": "login_user(username=None, password=None, expiresIn=None)",
-            "function_type": "method",
-            "return_type": "Dict"
-        },
-        {
-            "name": "register_user",
-            "docstring": "Registers a new user",
-            "module": "openreview.api.OpenReviewClient",
-            "signature": "register_user(email=None, fullname=None, password=None)",
-            "function_type": "method",
-            "return_type": "Dict"
+            # Note: return_type is not consistently available in method data
+            # Could be added to class method definitions if needed
         }
-    ]
-    
+        functions.append(function)
+
     return functions
 
 
