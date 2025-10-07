@@ -7,6 +7,7 @@ runtime dependencies on the actual openreview-py library.
 Data Organization:
 - get_openreview_classes(): Returns class definitions with methods (single source of truth)
 - get_openreview_functions(): Extracts methods from OpenReviewClient class (derived from classes)
+- get_openreview_tools(): Returns standalone utility functions from openreview.tools module
 - This approach eliminates duplication and ensures consistency
 """
 
@@ -56,6 +57,102 @@ def get_openreview_functions() -> List[Dict[str, Any]]:
         functions.append(function)
 
     return functions
+
+
+def get_openreview_tools() -> List[Dict[str, Any]]:
+    """
+    Extract utility function metadata from the openreview.tools module.
+
+    Returns a list of dictionaries containing utility function information:
+    - name: Function name
+    - docstring: Function docstring with detailed parameter descriptions
+    - module: Module path (openreview.tools)
+    - signature: Function signature as string
+    - function_type: Always "function" (standalone utility functions)
+    - parameters: List of parameter details
+    """
+    tools = [
+        {
+            "name": "get_profiles",
+            "docstring": """Helper function that repeatedly queries for profiles, given IDs and emails.
+
+Useful for getting more Profiles than the server will return by default (1000).
+This function handles batch processing, creates placeholder profiles for unconfirmed emails,
+and can optionally enrich profiles with publications, relations, and preferred emails.
+
+:param client: OpenReview client instance (API 1 or API 2)
+:type client: openreview.Client or openreview.api.OpenReviewClient
+:param ids_or_emails: List of profile IDs (starting with ~) or email addresses
+:type ids_or_emails: list[str]
+:param with_publications: If True, fetches publications from both API 1 and API 2 for each profile
+:type with_publications: bool, default=False
+:param with_relations: If True, recursively fetches related profiles and adds profile_id to relations
+:type with_relations: bool, default=False
+:param with_preferred_emails: Invitation id to get edges containing preferred emails
+:type with_preferred_emails: str, optional
+:param as_dict: If True, returns dict mapping input ids/emails to profiles instead of list
+:type as_dict: bool, default=False
+
+:return: List of Profile objects, or dict mapping ids/emails to Profiles if as_dict=True
+:rtype: list[Profile] or dict[str, Profile]
+
+Features:
+- Automatically batches requests in groups of 1000 to handle large datasets
+- Separates IDs (~Username1) from emails for efficient querying
+- Creates placeholder Profile objects for unconfirmed email addresses
+- Fetches publications from both API versions when with_publications=True
+- Resolves profile relations recursively when with_relations=True
+- Updates preferred emails from edges when with_preferred_emails is provided
+- Returns as dictionary for easy lookup when as_dict=True""",
+            "module": "openreview.tools",
+            "signature": "get_profiles(client, ids_or_emails, with_publications=False, with_relations=False, with_preferred_emails=None, as_dict=False)",
+            "function_type": "function",
+            "parameters": [
+                {
+                    "name": "client",
+                    "type": "openreview.Client or openreview.api.OpenReviewClient",
+                    "required": True,
+                    "description": "OpenReview client instance (API 1 or API 2)"
+                },
+                {
+                    "name": "ids_or_emails",
+                    "type": "list[str]",
+                    "required": True,
+                    "description": "List of profile IDs (starting with ~) or email addresses"
+                },
+                {
+                    "name": "with_publications",
+                    "type": "bool",
+                    "required": False,
+                    "default": False,
+                    "description": "If True, fetches publications from both API 1 and API 2 for each profile"
+                },
+                {
+                    "name": "with_relations",
+                    "type": "bool",
+                    "required": False,
+                    "default": False,
+                    "description": "If True, recursively fetches related profiles and adds profile_id to relations"
+                },
+                {
+                    "name": "with_preferred_emails",
+                    "type": "str",
+                    "required": False,
+                    "default": None,
+                    "description": "Invitation id to get edges containing preferred emails"
+                },
+                {
+                    "name": "as_dict",
+                    "type": "bool",
+                    "required": False,
+                    "default": False,
+                    "description": "If True, returns dict mapping input ids/emails to profiles instead of list"
+                }
+            ]
+        }
+    ]
+
+    return tools
 
 
 def get_openreview_classes() -> List[Dict[str, Any]]:
@@ -1350,8 +1447,9 @@ def get_library_overview() -> Dict[str, Any]:
     Get a comprehensive overview of the openreview-py library.
 
     Returns a dictionary with:
-    - functions: All available functions
+    - functions: All available functions (from OpenReviewClient)
     - classes: All available classes
+    - tools: Utility functions from openreview.tools module
     - modules: Module structure
     - statistics: Counts and metadata
     - api_versions: Information about API 1 vs API 2
@@ -1365,10 +1463,12 @@ def get_library_overview() -> Dict[str, Any]:
     """
     functions = get_openreview_functions()
     classes = get_openreview_classes()
+    tools = get_openreview_tools()
 
     return {
         "functions": functions,
         "classes": classes,
+        "tools": tools,
         "modules": [
             "openreview",
             "openreview.api",
@@ -1378,6 +1478,7 @@ def get_library_overview() -> Dict[str, Any]:
         "statistics": {
             "total_functions": len(functions),
             "total_classes": len(classes),
+            "total_tools": len(tools),
             "total_modules": 4
         },
         "api_versions": {
