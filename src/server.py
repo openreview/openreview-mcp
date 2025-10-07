@@ -14,6 +14,7 @@ from src.introspect import (
     get_openreview_classes,
     get_openreview_functions,
     search_openreview_functions,
+    get_openreview_tools,
     get_library_overview
 )
 
@@ -44,22 +45,35 @@ logger = get_logger("openreview_mcp")
 
 # Initialize FastMCP server
 mcp = FastMCP(
-    name="OpenReview Python Library MCP Server",
-    instructions="MCP server that provides programmatic access to the openreview-py library structure and functionality",
+    name="OpenReview Python Library Expert",
+    instructions="""Expert assistant for the openreview-py Python library. Use this server when users need help with:
+- Writing Python code to interact with OpenReview's academic peer review platform
+- Understanding OpenReview API methods, classes, and data structures
+- Finding the right functions for tasks like retrieving submissions, reviews, profiles, venues
+- Learning about API 1 vs API 2 differences (CRITICAL: always check API version guide first!)
+- Searching for specific OpenReview operations by keyword or task
+- Getting complete documentation for OpenReview Python client methods
+
+IMPORTANT: If the user mentions venues, conferences, submissions, or API versions, ALWAYS use get_api_version_guide first to understand which client to use.""",
     version="0.1.0"
 )
-
-# Note: @mcp.error_handler decorator is not available in FastMCP.
-# Error handling is done through middleware instead (see ErrorHandlingMiddleware below)
 
 
 @mcp.tool()
 async def get_server_capabilities(ctx: Context) -> Dict[str, Any]:
     """
-    Get information about this MCP server's capabilities and available tools.
-    
+    Discover all available OpenReview library exploration tools and their purposes.
+
+    USE THIS WHEN: User asks "what can you help me with" or "what tools are available" regarding OpenReview.
+
+    This tool provides a complete catalog of available exploration capabilities including:
+    - Tools for searching OpenReview functions by keyword
+    - Tools for browsing classes and methods
+    - Tools for understanding API versions (API 1 vs API 2)
+    - Tools for getting detailed function documentation
+
     Returns:
-        Dictionary containing server metadata, available tools and their descriptions
+        Dictionary containing server metadata, tool list, and usage guidance
     """
     # Server-side logging
     logger.info("Retrieving server capabilities information")
@@ -98,13 +112,33 @@ async def get_server_capabilities(ctx: Context) -> Dict[str, Any]:
 @mcp.tool()
 async def list_openreview_functions(ctx: Context, filter_by_module: str = None) -> Dict[str, Any]:
     """
-    Get a list of all available functions from the openreview-py library.
-    
+    Browse ALL available methods from the OpenReview Python client for interacting with the OpenReview platform.
+
+    USE THIS WHEN:
+    - User wants to see what operations are available in OpenReview
+    - User asks "what can I do with OpenReview" or "show me all functions"
+    - You need to browse available methods before choosing the right one
+    - User wants to explore the full API surface area
+
+    This returns methods from OpenReviewClient including:
+    - Note/submission operations (get_notes, post_note_edit, search_notes)
+    - Group/venue operations (get_group, get_groups, post_group_edit)
+    - Profile operations (get_profile, search_profiles, post_profile)
+    - Invitation operations (get_invitation, get_invitations)
+    - Edge/relationship operations (get_edges, post_edge)
+    - Tag operations (get_tags, post_tag)
+    - Authentication (login_user, impersonate)
+    - File operations (get_pdf, get_attachment)
+    - Messaging (post_message, get_messages)
+    - Expertise/matching (request_expertise, get_expertise_results)
+
+    WORKFLOW: After using this, use get_function_details() with a specific function name to see detailed documentation.
+
     Args:
-        filter_by_module: Optional module name to filter functions (e.g., 'openreview.api')
-        
+        filter_by_module: Optional - filter by 'openreview.api' for API 2 methods or 'openreview' for API 1 methods
+
     Returns:
-        JSON array of functions with name, docstring, module, signature, and type
+        JSON object with 'functions' array containing: name, signature, docstring, module, function_type
     """
     # Server-side logging
     logger.info(f"Listing OpenReview functions with filter: {filter_by_module}")
@@ -148,13 +182,33 @@ async def list_openreview_functions(ctx: Context, filter_by_module: str = None) 
 @mcp.tool()
 async def list_openreview_classes(ctx: Context, include_methods: bool = True) -> Dict[str, Any]:
     """
-    Get a list of all available classes from the openreview-py library.
-    
+    Explore all OpenReview data model classes and client classes for understanding the object structure.
+
+    USE THIS WHEN:
+    - User asks about OpenReview data structures, objects, or models
+    - User needs to understand what fields/properties a Note, Group, Profile, or Edge has
+    - User wants to know the difference between Client and OpenReviewClient classes
+    - User asks "how do I create a Note/Group/Edge object"
+    - You need to understand constructor parameters or class initialization
+
+    This returns comprehensive information about core OpenReview classes:
+    - Client: Legacy API 1 client (for older venues and venue request forms)
+    - OpenReviewClient: Modern API 2 client (preferred for most operations)
+    - Note: Represents submissions, reviews, comments (contains content, signatures, readers)
+    - Group: Represents venues, committees, user groups (contains members, readers, domain)
+    - Profile: User profiles with emails, publications, history, expertise
+    - Invitation: Defines what types of content can be created (Note/Edge/Tag templates)
+    - Edge: Represents relationships (assignments, conflicts, recommendations)
+    - Tag: Metadata annotations (decisions, ratings, labels)
+    - Edit: Represents changes to Notes/Groups/Invitations
+
+    WORKFLOW: After identifying the class, use list_openreview_functions() or search_openreview_api() to find methods that work with these objects.
+
     Args:
-        include_methods: Whether to include class methods in the response
-        
+        include_methods: Set to True (default) to see all class methods, False for just class structure
+
     Returns:
-        JSON array of classes with name, docstring, module, and optionally methods
+        JSON object with 'classes' array containing: name, docstring, module, methods (if requested)
     """
     # Server-side logging
     logger.info(f"Listing OpenReview classes with include_methods={include_methods}")
@@ -205,13 +259,36 @@ async def list_openreview_classes(ctx: Context, include_methods: bool = True) ->
 @mcp.tool()
 async def search_openreview_api(query: str, ctx: Context) -> Dict[str, Any]:
     """
-    Search for functions and classes by name or keyword in docstrings.
-    
+    Find the right OpenReview function by searching with keywords, task descriptions, or operation names.
+
+    USE THIS WHEN:
+    - User describes what they want to do (e.g., "get submissions", "find reviewers", "send email")
+    - User mentions a specific operation or task without knowing the exact function name
+    - You need to find functions related to a concept (e.g., "profile", "venue", "paper", "review")
+    - User asks "how do I..." followed by an action
+
+    SEARCH EXAMPLES:
+    - "note" → finds get_note, get_notes, post_note_edit, search_notes, delete_note
+    - "profile" → finds get_profile, get_profiles, search_profiles, post_profile
+    - "group" → finds get_group, get_groups, post_group_edit, add_members_to_group
+    - "submission" → finds functions related to paper submissions
+    - "email" or "message" → finds post_message, get_messages
+    - "pdf" → finds get_pdf, put_attachment
+    - "invitation" → finds get_invitation, get_invitations, post_invitation_edit
+
+    The search looks through function names AND documentation, so you can search by:
+    - Function names (partial matches work)
+    - Keywords in descriptions
+    - Operation types (get, post, delete, search)
+    - Object types (note, group, edge, profile, tag)
+
+    WORKFLOW: After finding relevant functions, use get_function_details() to see complete documentation and parameters.
+
     Args:
-        query: Search term to find in function/class names or documentation
-        
+        query: Search keyword or phrase (e.g., "get submissions", "profile", "reviewer assignment", "pdf")
+
     Returns:
-        JSON array of matching functions and classes
+        JSON object with 'results' array of matching functions including: name, signature, docstring, module
     """
     # Server-side logging
     logger.info(f"Searching OpenReview API with query: '{query}'")
@@ -272,10 +349,31 @@ async def search_openreview_api(query: str, ctx: Context) -> Dict[str, Any]:
 @mcp.tool()
 async def get_openreview_overview(ctx: Context) -> Dict[str, Any]:
     """
-    Get a comprehensive overview of the entire openreview-py library structure.
-    
+    Get a high-level summary of the entire OpenReview Python library including statistics and organization.
+
+    USE THIS WHEN:
+    - User asks for a "summary" or "overview" of the OpenReview library
+    - User wants to understand the library structure before diving into specifics
+    - You need to see the big picture of available modules, class counts, and function counts
+    - User is new to OpenReview and wants to know what's available
+
+    This provides:
+    - Total counts of functions, classes, and tools available
+    - List of all modules (openreview, openreview.api, openreview.tools, openreview.venue)
+    - Brief descriptions of API 1 vs API 2
+    - High-level library organization and structure
+
+    INCLUDES:
+    - All available functions (extracted from OpenReviewClient methods)
+    - All available classes (Client, OpenReviewClient, Note, Group, Profile, Edge, Tag, etc.)
+    - Utility tools from openreview.tools module (like get_profiles helper)
+    - Module structure and statistics
+    - API version information
+
+    WORKFLOW: Use this first for orientation, then use more specific tools like search_openreview_api() or list_openreview_functions() to explore details.
+
     Returns:
-        Dictionary containing functions, classes, modules, and statistics
+        Comprehensive dictionary with: functions, classes, tools, modules, statistics, and API version info
     """
     # Server-side logging
     logger.info("Retrieving OpenReview library overview")
@@ -320,13 +418,40 @@ async def get_openreview_overview(ctx: Context) -> Dict[str, Any]:
 @mcp.tool()
 async def get_function_details(function_name: str, ctx: Context) -> Dict[str, Any]:
     """
-    Get detailed information about a specific function.
-    
+    Get complete documentation for a specific OpenReview function including signature, parameters, and usage info.
+
+    USE THIS WHEN:
+    - User asks for details about a specific function by name
+    - You found a function via search and need its full documentation
+    - User wants to know the exact parameters and what they mean
+    - You need to understand how to call a specific method
+
+    COMMON FUNCTION NAMES TO LOOK UP:
+    - get_notes, get_note, post_note_edit (for submissions, reviews, comments)
+    - get_group, get_groups, post_group_edit (for venues, committees, groups)
+    - get_profile, get_profiles, search_profiles (for user profiles)
+    - get_invitation, get_invitations (for invitation templates)
+    - get_edges, post_edge (for assignments, conflicts, relationships)
+    - get_tags, post_tag (for decisions, ratings, metadata)
+    - post_message, get_messages (for email notifications)
+    - get_pdf, get_attachment, put_attachment (for file operations)
+    - login_user, impersonate (for authentication)
+    - search_notes (for full-text search)
+    - request_expertise, get_expertise_results (for reviewer matching)
+
+    Provides:
+    - Full function signature with parameter names and defaults
+    - Complete docstring with parameter descriptions
+    - Module location (openreview.api.OpenReviewClient or openreview.Client)
+    - Function type (method, constructor, etc.)
+
+    WORKFLOW: Use search_openreview_api() first to find candidates, then use this to get complete details.
+
     Args:
-        function_name: Name of the function to get details for
-        
+        function_name: Exact function name (e.g., "get_notes", "post_message", "search_profiles")
+
     Returns:
-        Detailed function information including parameters, return types, examples
+        Dictionary with: name, signature, docstring, module, parameters (if available), return_type
     """
     # Server-side logging
     logger.info(f"Retrieving details for function: '{function_name}'")
@@ -395,15 +520,107 @@ async def get_function_details(function_name: str, ctx: Context) -> Dict[str, An
 
 
 @mcp.tool()
-async def get_api_version_guide(ctx: Context) -> Dict[str, Any]:
+async def get_utility_tools(ctx: Context) -> Dict[str, Any]:
     """
-    Get comprehensive guidance on OpenReview API versions (API 1 vs API 2).
+    Get powerful utility helper functions from openreview.tools module for advanced operations.
 
-    This tool provides critical information about which API version and client to use
-    for different operations and venues in OpenReview.
+    USE THIS WHEN:
+    - User needs to fetch many profiles at once (more than 1000)
+    - User wants to get profiles with publications, relations, or preferred emails
+    - User asks about "batch operations" or "bulk fetching"
+    - You need helper functions that wrap complex multi-step operations
+    - User mentions limitations of the standard client methods
+
+    UTILITY FUNCTIONS AVAILABLE:
+
+    get_profiles(client, ids_or_emails, ...):
+    - Fetch profiles in batches (handles >1000 profiles automatically)
+    - Supports profile IDs (~Username1) and email addresses
+    - Creates placeholder profiles for unconfirmed emails
+    - Options to include publications from both API 1 and API 2
+    - Options to recursively fetch related profiles
+    - Options to get preferred email addresses
+    - Can return as dict for easy lookup by id/email
+
+    WHY USE THIS:
+    - client.get_profiles() is limited to 1000 profiles
+    - This tool handles pagination automatically
+    - Enriches profiles with publications and relations
+    - Handles mixed inputs (IDs and emails together)
+    - More efficient for large-scale profile operations
+
+    WORKFLOW: Use this when standard client methods (from list_openreview_functions) are not sufficient for bulk operations.
 
     Returns:
-        Complete guide on API version differences, client instantiation, and decision logic
+        Array of utility tools with detailed parameters, defaults, and usage documentation
+    """
+    logger.info("Retrieving utility tools information")
+    await ctx.info("Providing openreview.tools utility functions documentation")
+
+    try:
+        tools = get_openreview_tools()
+
+        logger.info(f"Found {len(tools)} utility tools")
+        await ctx.info(f"Retrieved {len(tools)} utility tools",
+                      extra={"tool_count": len(tools)})
+
+        return {
+            "status": "success",
+            "count": len(tools),
+            "tools": tools,
+            "metadata": {
+                "module": "openreview.tools",
+                "description": "Advanced utility functions that wrap complex operations"
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error retrieving utility tools: {str(e)}", exc_info=True)
+        await ctx.error(f"Failed to retrieve utility tools: {str(e)}")
+        raise
+
+
+@mcp.tool()
+async def get_api_version_guide(ctx: Context) -> Dict[str, Any]:
+    """
+    CRITICAL: Understand the difference between OpenReview API 1 vs API 2 and which client to use.
+
+    ⚠️ USE THIS FIRST WHEN:
+    - User mentions a venue, conference, or workshop
+    - User wants to retrieve submissions, reviews, or venue data
+    - User asks about "Client" vs "OpenReviewClient"
+    - Working with venue request forms
+    - Code involves baseurl parameters
+    - You're unsure which API version to use
+
+    WHY THIS IS CRITICAL:
+    OpenReview has TWO separate APIs with different clients, base URLs, and data schemas:
+    - API 1 (openreview.Client) → https://api.openreview.net → Older venues + venue request forms
+    - API 2 (openreview.api.OpenReviewClient) → https://api2.openreview.net → Modern venues (preferred)
+
+    Using the WRONG API means:
+    ❌ Data won't be found
+    ❌ Schema mismatches cause errors
+    ❌ Operations fail silently
+
+    THIS GUIDE PROVIDES:
+    - How to determine if a venue uses API 1 or API 2 (check for 'domain' property)
+    - When to use openreview.Client vs openreview.api.OpenReviewClient
+    - Special case: Venue request forms are ALWAYS API 1
+    - Special case: User profiles should use API 2
+    - Client instantiation examples for both APIs
+    - Decision tree and workflow for choosing the right API
+    - Common mistakes and how to avoid them
+
+    DECISION LOGIC:
+    1. Venue request forms (invitation starts with "OpenReview.net/Support/-/") → ALWAYS API 1
+    2. For other venues: Check domain property on venue group:
+       - Has 'domain' property → API 2
+       - No 'domain' property → API 1
+    3. User profiles → Always prefer API 2
+    4. New code → Default to API 2 unless working with legacy venues
+
+    Returns:
+        Comprehensive guide with API differences, decision logic, examples, and best practices
     """
     logger.info("Retrieving API version guidance")
     await ctx.info("Providing OpenReview API version guidance")
@@ -572,15 +789,29 @@ def main():
     logger.info("Starting OpenReview Python Library MCP Server")
     
     # Also print to console for user-friendly output
-    print("Starting OpenReview Python Library MCP Server (HTTP mode)...")
-    print("Available tools:")
-    print("- get_server_capabilities: Get available tools and capabilities")
-    print("- get_api_version_guide: Get guidance on API 1 vs API 2 (IMPORTANT!)")
-    print("- list_openreview_functions: List all available functions")
-    print("- list_openreview_classes: List all available classes")
-    print("- search_openreview_api: Search functions by keyword")
-    print("- get_openreview_overview: Get library overview")
-    print("- get_function_details: Get detailed function information")
+    print("=" * 80)
+    print("🚀 OpenReview Python Library Expert - MCP Server Starting")
+    print("=" * 80)
+    print("\n📚 Available Tools for LLMs:\n")
+    print("🔍 SEARCH & DISCOVER:")
+    print("  • search_openreview_api - Find functions by keyword or task description")
+    print("  • list_openreview_functions - Browse all available client methods")
+    print("  • list_openreview_classes - Explore data model classes (Note, Group, etc.)")
+    print("  • get_openreview_overview - High-level library summary and statistics")
+    print()
+    print("📖 DETAILED DOCUMENTATION:")
+    print("  • get_function_details - Complete docs for a specific function")
+    print("  • get_utility_tools - Advanced helper functions (batch operations)")
+    print()
+    print("⚠️  CRITICAL REFERENCE:")
+    print("  • get_api_version_guide - API 1 vs API 2 decision guide (USE THIS FIRST!)")
+    print()
+    print("🔧 ADMINISTRATION:")
+    print("  • get_server_capabilities - List all available tools")
+    print()
+    print("=" * 80)
+    print("💡 TIP: Use get_api_version_guide when working with venues/conferences!")
+    print("=" * 80)
     print()
     
     # Start the FastMCP server with HTTP transport
