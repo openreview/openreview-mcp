@@ -266,26 +266,35 @@ async def search_openreview_api(query: str, ctx: Context) -> Dict[str, Any]:
     - User mentions a specific operation or task without knowing the exact function name
     - You need to find functions related to a concept (e.g., "profile", "venue", "paper", "review")
     - User asks "how do I..." followed by an action
+    - User asks about proof of service, reviewer history, or CV documentation
+
+    SEARCHES ACROSS:
+    - All OpenReviewClient methods (get_notes, post_message, etc.)
+    - All utility tools from openreview.tools (get_profiles, get_own_reviews)
 
     SEARCH EXAMPLES:
     - "note" → finds get_note, get_notes, post_note_edit, search_notes, delete_note
-    - "profile" → finds get_profile, get_profiles, search_profiles, post_profile
+    - "profile" → finds get_profile, get_profiles, search_profiles, post_profile, tools.get_profiles
     - "group" → finds get_group, get_groups, post_group_edit, add_members_to_group
     - "submission" → finds functions related to paper submissions
     - "email" or "message" → finds post_message, get_messages
     - "pdf" → finds get_pdf, put_attachment
     - "invitation" → finds get_invitation, get_invitations, post_invitation_edit
+    - "review" or "reviewer service" → finds get_own_reviews (utility tool)
+    - "batch" or "bulk" → finds tools.get_profiles for batch operations
+    - "proof" or "letter" or "CV" → finds get_own_reviews
 
     The search looks through function names AND documentation, so you can search by:
     - Function names (partial matches work)
     - Keywords in descriptions
     - Operation types (get, post, delete, search)
-    - Object types (note, group, edge, profile, tag)
+    - Object types (note, group, edge, profile, tag, review)
+    - Use cases (proof of service, batch operations, CV building)
 
-    WORKFLOW: After finding relevant functions, use get_function_details() to see complete documentation and parameters.
+    WORKFLOW: After finding relevant functions, use get_function_details() or get_utility_tools() to see complete documentation and parameters.
 
     Args:
-        query: Search keyword or phrase (e.g., "get submissions", "profile", "reviewer assignment", "pdf")
+        query: Search keyword or phrase (e.g., "get submissions", "profile", "reviewer service", "batch fetch", "pdf")
 
     Returns:
         JSON object with 'results' array of matching functions including: name, signature, docstring, module
@@ -528,31 +537,46 @@ async def get_utility_tools(ctx: Context) -> Dict[str, Any]:
     - User needs to fetch many profiles at once (more than 1000)
     - User wants to get profiles with publications, relations, or preferred emails
     - User asks about "batch operations" or "bulk fetching"
+    - User asks "How do I get proof of my reviewer service?" or "Can I see my reviews?"
+    - User asks about reviewer letters, proof of service, or CV documentation
     - You need helper functions that wrap complex multi-step operations
     - User mentions limitations of the standard client methods
 
     UTILITY FUNCTIONS AVAILABLE:
 
-    get_profiles(client, ids_or_emails, ...):
-    - Fetch profiles in batches (handles >1000 profiles automatically)
-    - Supports profile IDs (~Username1) and email addresses
-    - Creates placeholder profiles for unconfirmed emails
-    - Options to include publications from both API 1 and API 2
-    - Options to recursively fetch related profiles
-    - Options to get preferred email addresses
-    - Can return as dict for easy lookup by id/email
+    1. get_profiles(client, ids_or_emails, ...):
+       - Fetch profiles in batches (handles >1000 profiles automatically)
+       - Supports profile IDs (~Username1) and email addresses
+       - Creates placeholder profiles for unconfirmed emails
+       - Options to include publications from both API 1 and API 2
+       - Options to recursively fetch related profiles
+       - Options to get preferred email addresses
+       - Can return as dict for easy lookup by id/email
 
-    WHY USE THIS:
-    - client.get_profiles() is limited to 1000 profiles
-    - This tool handles pagination automatically
-    - Enriches profiles with publications and relations
-    - Handles mixed inputs (IDs and emails together)
-    - More efficient for large-scale profile operations
+       WHY USE THIS:
+       - client.get_profiles() is limited to 1000 profiles
+       - Handles pagination automatically
+       - Enriches profiles with publications and relations
+       - Handles mixed inputs (IDs and emails together)
+       - More efficient for large-scale profile operations
 
-    WORKFLOW: Use this when standard client methods (from list_openreview_functions) are not sufficient for bulk operations.
+    2. get_own_reviews(client):
+       - Retrieve ALL public reviews written by the authenticated user
+       - Works across both API 1 and API 2 venues automatically
+       - Returns submission titles with direct links to submissions and reviews
+       - Useful for documenting reviewer service, CV building, or proof of work
+
+       WHY USE THIS:
+       - Users often need to compile reviewing history for documentation
+       - OpenReview doesn't auto-generate reviewer certificates (contact organizers)
+       - Returns only public reviews (protects confidential ones)
+       - Alternative to manually checking openreview.net/activity
+       - Provides direct links for easy sharing/reference
+
+    WORKFLOW: Use this when standard client methods (from list_openreview_functions) are not sufficient for complex or bulk operations.
 
     Returns:
-        Array of utility tools with detailed parameters, defaults, and usage documentation
+        Array of utility tools with detailed parameters, defaults, usage examples, and documentation
     """
     logger.info("Retrieving utility tools information")
     await ctx.info("Providing openreview.tools utility functions documentation")

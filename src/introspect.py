@@ -149,6 +149,100 @@ Features:
                     "description": "If True, returns dict mapping input ids/emails to profiles instead of list"
                 }
             ]
+        },
+        {
+            "name": "get_own_reviews",
+            "docstring": """Retrieve all public reviews written by the authenticated user across both API 1 and API 2 venues.
+
+This function is useful for users who need to:
+- Compile a history of their reviewing activity for documentation purposes
+- Generate a list of reviews for a CV or proof of service
+- Find links to all their public reviews across OpenReview
+
+USE CASES:
+- User asks: "How do I get proof of my reviewer service?"
+- User asks: "Can I see all the reviews I've written?"
+- User asks: "How do I get a letter of proof for reviewing?"
+- User needs to document their academic service
+
+IMPORTANT NOTES:
+- OpenReview does NOT automatically generate reviewer letters of proof
+- Users should contact venue organizers directly for official letters
+- This function only returns PUBLIC reviews (reviews with 'everyone' in readers)
+- Works across both API 1 and API 2 venues automatically
+- Requires authentication (reviews are fetched based on logged-in user)
+
+WORKFLOW:
+The function:
+1. Automatically detects both API 1 and API 2 base URLs from the client
+2. Creates clients for both API versions using the same authentication token
+3. Retrieves all notes authored by the user from API 1 (using tauthor=True)
+4. Retrieves all notes signed by the user from API 2 (using signature and transitive_members)
+5. Filters for official reviews based on invitation patterns
+6. Verifies that both the review and submission are public ('everyone' in readers)
+7. Generates direct links to submissions and reviews on openreview.net
+
+HANDLING DIFFERENT VENUES:
+- API 1: Filters for invitations containing 'Official_Review'
+- API 2: Extracts review invitation suffix from venue domain group content
+- Special handling for TMLR and other venues with custom invitation patterns
+
+:param client: OpenReview client instance (API 1 or API 2) with valid authentication
+:type client: openreview.Client or openreview.api.OpenReviewClient
+
+:return: List of dictionaries, each containing submission title and links to submission/review
+:rtype: list[dict]
+
+RETURN SCHEMA:
+Each dictionary in the returned list has:
+- 'submission_title': str - Title of the paper that was reviewed
+- 'submission_link': str - URL to the submission on openreview.net
+- 'review_link': str - URL to the specific review on openreview.net
+
+EXAMPLE USAGE:
+```python
+import openreview
+
+# Login with your credentials
+client = openreview.api.OpenReviewClient(
+    baseurl='https://api2.openreview.net',
+    username='your_email@example.com',
+    password='your_password'
+)
+
+# Get all your public reviews
+reviews = openreview.tools.get_own_reviews(client)
+
+# Print review links
+for review in reviews:
+    print(f"Paper: {review['submission_title']}")
+    print(f"Review: {review['review_link']}")
+    print()
+```
+
+ALTERNATIVE WAYS TO VIEW REVIEWING ACTIVITY:
+- Visit openreview.net/activity to see recent activity
+- Visit openreview.net/messages to see emails from venue organizers
+- Contact venue organizers directly for official letters of service
+
+Features:
+- Automatically handles both API 1 and API 2 venues
+- Filters for public reviews only (protects confidential reviews)
+- Verifies submission visibility before including reviews
+- Returns direct links for easy access
+- Handles custom venue invitation patterns
+- Works with guest users (returns empty list if not authenticated)""",
+            "module": "openreview.tools",
+            "signature": "get_own_reviews(client)",
+            "function_type": "function",
+            "parameters": [
+                {
+                    "name": "client",
+                    "type": "openreview.Client or openreview.api.OpenReviewClient",
+                    "required": True,
+                    "description": "Authenticated OpenReview client instance (API 1 or API 2). Must be logged in to retrieve your own reviews."
+                }
+            ]
         }
     ]
 
@@ -1415,13 +1509,17 @@ def get_openreview_classes() -> List[Dict[str, Any]]:
 def search_openreview_functions(query: str) -> List[Dict[str, Any]]:
     """
     Search for functions by name or keyword in their docstrings.
-    
+
+    Searches across:
+    - OpenReviewClient methods (from get_openreview_functions)
+    - Utility functions from openreview.tools (from get_openreview_tools)
+
     Args:
         query: Search term to match against function names and docstrings
-        
+
     Returns:
-        List of matching function dictionaries
-        
+        List of matching function dictionaries (combined from functions and tools)
+
     TODO: Implement advanced search:
     1. Fuzzy string matching
     2. Search in parameter names and types
@@ -1429,16 +1527,22 @@ def search_openreview_functions(query: str) -> List[Dict[str, Any]]:
     4. Rank results by relevance
     5. Support regex patterns
     """
+    # Get both functions and utility tools
     functions = get_openreview_functions()
+    tools = get_openreview_tools()
+
+    # Combine them for searching
+    all_searchable = functions + tools
+
     query_lower = query.lower()
-    
+
     # Simple string matching implementation
     matching_functions = []
-    for func in functions:
-        if (query_lower in func["name"].lower() or 
+    for func in all_searchable:
+        if (query_lower in func["name"].lower() or
             query_lower in func.get("docstring", "").lower()):
             matching_functions.append(func)
-    
+
     return matching_functions
 
 
