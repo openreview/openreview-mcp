@@ -604,6 +604,121 @@ async def get_utility_tools(ctx: Context) -> Dict[str, Any]:
 
 
 @mcp.tool()
+async def get_venue_class_details(ctx: Context) -> Dict[str, Any]:
+    """
+    Get comprehensive documentation for the Venue class used to manage conferences and workshops.
+
+    USE THIS WHEN:
+    - User asks about setting up a conference or workshop
+    - User mentions "venue", "conference management", "workshop management"
+    - User needs to understand how to configure review processes
+    - User wants to set up submissions, reviews, decisions, or committees
+    - User asks about organizing an academic event on OpenReview
+    - User needs to manage program chairs, reviewers, area chairs
+    - User wants to understand the conference lifecycle workflow
+
+    THE VENUE CLASS:
+    The Venue class is the primary tool for conference organizers to manage their entire event on OpenReview.
+    It orchestrates all aspects of the peer review process from submission to final decisions.
+
+    WHAT THIS TOOL PROVIDES:
+    - Complete Venue class documentation with detailed method descriptions
+    - Full instantiation example showing how to set up a conference
+    - Explanation of committee structure (Program Chairs, ACs, SACs, Reviewers, etc.)
+    - Overview of workflow stages (Submission → Review → Decision → Publication)
+    - Key methods for each stage of conference management
+    - Special features like plagiarism checking, ethics reviews, and track management
+
+    COMMON USE CASES:
+    1. Setting up a new conference venue
+    2. Configuring submission deadlines and requirements
+    3. Managing reviewer recruitment and assignments
+    4. Setting up review stages and meta-review processes
+    5. Handling decisions and notifications
+    6. Computing reviewer and area chair statistics
+    7. Managing ethics reviews for flagged submissions
+    8. Bulk operations like uploading decisions via CSV
+
+    WORKFLOW STAGES EXPLAINED:
+    - Submission Stage: Authors submit papers
+    - Expertise Selection: Committee members indicate expertise areas
+    - Bid Stage: Reviewers bid on papers they want to review
+    - Assignment/Matching: Automated or manual assignment of reviewers
+    - Review Stage: Reviewers write and submit reviews
+    - Rebuttal Stage: Authors respond to reviews
+    - Meta-Review Stage: Area chairs synthesize reviews and make recommendations
+    - Decision Stage: Program chairs make accept/reject decisions
+    - Comment Stage: Discussion between authors and reviewers
+    - Registration Stage: Camera-ready submissions and final materials
+
+    Returns:
+        Complete Venue class documentation including all methods, attributes, and usage examples
+    """
+    logger.info("Retrieving Venue class documentation")
+    await ctx.info("Providing comprehensive Venue class documentation for conference management")
+
+    try:
+        classes = get_openreview_classes()
+        venue_class = next((c for c in classes if c["name"] == "Venue"), None)
+
+        if not venue_class:
+            error_msg = "Venue class not found in class definitions"
+            logger.error(error_msg)
+            await ctx.error(error_msg)
+            return {"error": error_msg}
+
+        logger.info("Venue class documentation retrieved successfully")
+        await ctx.info("Venue class documentation provided",
+                      extra={
+                          "method_count": len(venue_class.get("methods", [])),
+                          "module": venue_class.get("module")
+                      })
+
+        return {
+            "status": "success",
+            "class": venue_class,
+            "usage_notes": {
+                "typical_workflow": [
+                    "1. Instantiate Venue with client, venue_id, and support_user",
+                    "2. Configure basic settings (name, dates, contact, website)",
+                    "3. Enable committee types (use_area_chairs, use_senior_area_chairs, etc.)",
+                    "4. Configure stage objects (submission_stage, review_stage, etc.)",
+                    "5. Call setup() to initialize venue infrastructure",
+                    "6. Call create_submission_stage() to open submissions",
+                    "7. Call create_review_stage() to enable reviews",
+                    "8. Continue through other stages as needed",
+                    "9. Use get_submissions() to retrieve and analyze submissions",
+                    "10. Use compute_reviewers_stats() to track reviewer performance"
+                ],
+                "important_notes": [
+                    "Venue class requires openreview.api.OpenReviewClient (API 2)",
+                    "Most methods create invitations and groups on OpenReview",
+                    "Stages must be activated in order (submission before review, etc.)",
+                    "Committee recruitment can be done via recruit_reviewers() method",
+                    "Assignments can be automated using setup_committee_matching()",
+                    "Bulk operations available for decisions and assignments"
+                ],
+                "related_classes": [
+                    "openreview.stages.SubmissionStage - Configure submission parameters",
+                    "openreview.stages.ReviewStage - Configure review parameters",
+                    "openreview.stages.MetaReviewStage - Configure meta-review parameters",
+                    "openreview.stages.DecisionStage - Configure decision parameters",
+                    "openreview.stages.CommentStage - Configure comment parameters"
+                ]
+            },
+            "metadata": {
+                "timestamp": datetime.datetime.now().isoformat(),
+                "module": venue_class.get("module"),
+                "method_count": len(venue_class.get("methods", []))
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error retrieving Venue class details: {str(e)}", exc_info=True)
+        await ctx.error(f"Failed to retrieve Venue class details: {str(e)}")
+        raise
+
+
+@mcp.tool()
 async def get_api_version_guide(ctx: Context) -> Dict[str, Any]:
     """
     CRITICAL: Understand the difference between OpenReview API 1 vs API 2 and which client to use.
@@ -826,6 +941,7 @@ def main():
     print("📖 DETAILED DOCUMENTATION:")
     print("  • get_function_details - Complete docs for a specific function")
     print("  • get_utility_tools - Advanced helper functions (batch operations)")
+    print("  • get_venue_class_details - Venue class for conference management")
     print()
     print("⚠️  CRITICAL REFERENCE:")
     print("  • get_api_version_guide - API 1 vs API 2 decision guide (USE THIS FIRST!)")

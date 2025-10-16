@@ -1501,6 +1501,369 @@ def get_openreview_classes() -> List[Dict[str, Any]]:
                 }
             ]
         },
+        {
+            "name": "Venue",
+            "docstring": """Represents a conference or workshop venue in OpenReview with comprehensive management capabilities.
+
+The Venue class is the main orchestrator for managing academic conferences and workshops on OpenReview.
+It handles the complete lifecycle of a venue including submissions, reviews, decisions, and committee management.
+
+INSTANTIATION EXAMPLE:
+```python
+import openreview
+import datetime
+
+# Initialize the client
+client = openreview.api.OpenReviewClient(
+    baseurl='https://api2.openreview.net',
+    username='user@example.com',
+    password='password'
+)
+
+# Create a new venue
+venue = openreview.venue.Venue(client, 'ICML.cc/2025/Conference', support_user='openreview.net/Support')
+venue.request_form_invitation = 'openreview.net/Support/Venue_Request/-/ICML'
+venue.name = 'Thirty-ninth International Conference on Machine Learning'
+venue.short_name = 'ICML 2025'
+venue.website = 'https://icml.cc'
+venue.contact = 'contact@icml.cc'
+venue.location = 'Virtual'
+venue.start_date = '2025/07/01'
+venue.use_area_chairs = True
+venue.use_senior_area_chairs = True
+venue.use_ethics_chairs = True
+venue.use_publication_chairs = True
+
+# Configure submission stage
+due_date = datetime.datetime(2025, 2, 1, 23, 59)
+venue.submission_stage = openreview.stages.SubmissionStage(
+    start_date=None,
+    due_date=due_date,
+    double_blind=True
+)
+
+# Configure review stage
+venue.review_stage = openreview.stages.ReviewStage(
+    start_date=due_date + datetime.timedelta(weeks=1),
+    allow_de_anonymization=False
+)
+
+# Configure meta-review stage
+venue.meta_review_stage = openreview.stages.MetaReviewStage(
+    start_date=due_date + datetime.timedelta(weeks=2),
+    due_date=due_date + datetime.timedelta(weeks=4)
+)
+
+# Setup the venue
+venue.setup(['pc@icml.cc'])
+venue.create_submission_stage()
+venue.create_review_stage()
+```
+
+KEY ATTRIBUTES:
+- venue_id: Main identifier for the venue (e.g., 'ICML.cc/2025/Conference')
+- name: Full official name of the venue
+- short_name: Abbreviated name displayed in the UI
+- website: Conference website URL
+- contact: Contact email for venue communications
+- start_date: Venue start date (format: 'YYYY/MM/DD')
+
+COMMITTEE STRUCTURE:
+- Program Chairs: Overall conference organizers
+- Senior Area Chairs: Supervise area chairs (optional)
+- Area Chairs: Manage reviewers and make meta-review recommendations (optional)
+- Reviewers: Write reviews for submissions
+- Ethics Chairs/Reviewers: Handle ethics reviews for flagged submissions (optional)
+- Publication Chairs: Manage camera-ready submissions (optional)
+- Authors: Paper submitters
+
+WORKFLOW STAGES:
+The venue workflow consists of multiple stages that can be configured and activated:
+
+1. Submission Stage (submission_stage):
+   - Handles paper submissions
+   - Supports blind/double-blind configurations
+   - Allows multiple deadlines (first deadline + full submission deadline)
+   - Manages withdrawal and desk rejection processes
+
+2. Expertise Selection Stage (expertise_selection_stage):
+   - Committee members select papers they have expertise in
+   - Used to inform automated assignment
+
+3. Bid Stage (bid_stages):
+   - Committee members bid on papers they want to review
+   - Multiple bid stages can be configured for different committees
+
+4. Assignment/Matching:
+   - Automated or manual reviewer assignments
+   - Conflict detection and management
+   - Affinity score computation for optimal matching
+
+5. Review Stage (review_stage):
+   - Reviewers write and submit reviews
+   - Configurable anonymity and visibility settings
+   - Optional review rebuttal stage
+
+6. Review Rebuttal Stage (review_rebuttal_stage):
+   - Authors respond to reviews
+   - Time-limited response period
+
+7. Ethics Review Stage (ethics_review_stage):
+   - Special review process for flagged submissions
+   - Optional ethics committee involvement
+
+8. Meta-Review Stage (meta_review_stage):
+   - Area chairs write recommendations
+   - Synthesis of reviewer feedback
+
+9. Decision Stage (decision_stage):
+   - Program chairs make accept/reject decisions
+   - Can upload decisions in bulk via CSV
+   - Sends decision notifications
+
+10. Comment Stage (comment_stage):
+    - Public and official comments
+    - Author-reviewer discussion period
+
+11. Registration Stages (registration_stages):
+    - Camera-ready submission
+    - Copyright agreements
+    - Final materials collection
+
+KEY METHODS:
+
+Setup Methods:
+- setup(): Initialize venue groups, invitations, and committee structure. You only need to run this once.
+- set_main_settings(): Configure basic venue parameters from request form
+- create_submission_stage(): Activate the submission process
+- create_review_stage(): Enable review submissions
+- create_meta_review_stage(): Enable meta-reviews
+- create_decision_stage(): Enable decision posting
+- create_bid_stages(): Set up bidding for committees
+- create_comment_stage(): Enable commenting functionality
+
+Committee Management:
+- recruit_reviewers(): Send recruitment emails to potential reviewers
+- setup_committee_matching(): Configure automated assignment system
+- set_assignments(): Deploy reviewer assignments
+- unset_assignments(): Remove assignments
+
+Submission Management:
+- get_submissions(): Retrieve all submissions with optional filters
+- post_decision_stage(): Update submission visibility after decisions
+- send_decision_notifications(): Email authors with decisions
+
+Matching/Assignment:
+- setup_committee_matching(): Initialize assignment algorithms
+- set_assignments(): Deploy computed assignments
+- set_track_sac_assignments(): Assign senior area chairs to tracks
+
+Statistics:
+- compute_reviewers_stats(): Calculate reviewer metrics
+- compute_acs_stats(): Calculate area chair metrics
+
+Special Features:
+- iThenticate plagiarism checking integration
+- Track-based submissions with specialized workflows
+- Automated conflict-of-interest detection
+- Bulk operations support
+- Ethics review flagging and workflows
+
+:param client: OpenReview client instance (API 2)
+:type client: openreview.api.OpenReviewClient
+:param venue_id: Unique identifier for the venue (e.g., 'Conference.org/2025')
+:type venue_id: str
+:param support_user: Support user group ID (typically 'openreview.net/Support')
+:type support_user: str""",
+            "module": "openreview.venue",
+            "methods": [
+                {
+                    "name": "__init__",
+                    "signature": "__init__(client, venue_id, support_user)",
+                    "docstring": "Initialize a Venue object. Sets up default configuration for all venue properties."
+                },
+                {
+                    "name": "set_main_settings",
+                    "signature": "set_main_settings(request_note)",
+                    "docstring": "Configure main venue settings from a venue request form note. Extracts venue name, dates, committee names, and reviewer settings."
+                },
+                {
+                    "name": "setup",
+                    "signature": "setup(program_chair_ids=[], publication_chairs_ids=[])",
+                    "docstring": "Initialize the venue infrastructure: create meta invitation, venue group, program chairs, reviewers, area chairs, senior area chairs, ethics committees, and publication chairs groups."
+                },
+                {
+                    "name": "create_submission_stage",
+                    "signature": "create_submission_stage()",
+                    "docstring": "Activate submission stage: create submission invitation, withdrawal/desk rejection invitations, post-submission edits, PC revisions, reviewer/AC group invitations, and optional plagiarism checking."
+                },
+                {
+                    "name": "create_review_stage",
+                    "signature": "create_review_stage()",
+                    "docstring": "Activate review stage: create review invitation for reviewers to submit reviews."
+                },
+                {
+                    "name": "create_review_rebuttal_stage",
+                    "signature": "create_review_rebuttal_stage()",
+                    "docstring": "Activate review rebuttal stage: enable authors to respond to reviews."
+                },
+                {
+                    "name": "create_meta_review_stage",
+                    "signature": "create_meta_review_stage()",
+                    "docstring": "Activate meta-review stage: create invitation for area chairs to write meta-reviews/recommendations."
+                },
+                {
+                    "name": "create_decision_stage",
+                    "signature": "create_decision_stage()",
+                    "docstring": "Activate decision stage: create decision invitation and optionally process bulk decisions from CSV file."
+                },
+                {
+                    "name": "create_bid_stages",
+                    "signature": "create_bid_stages()",
+                    "docstring": "Create bid invitations for committee members to express interest in reviewing papers."
+                },
+                {
+                    "name": "create_comment_stage",
+                    "signature": "create_comment_stage()",
+                    "docstring": "Activate commenting: create official comment invitation, optional public comments, and chat functionality."
+                },
+                {
+                    "name": "create_ethics_review_stage",
+                    "signature": "create_ethics_review_stage()",
+                    "docstring": "Activate ethics review stage: create ethics flag invitation, ethics review invitations, setup ethics reviewer matching, and flag specified submissions."
+                },
+                {
+                    "name": "get_submissions",
+                    "signature": "get_submissions(venueid=None, accepted=False, sort=None, details=None)",
+                    "docstring": "Retrieve submissions. Can filter by venueid, acceptance status, with optional sorting and detail inclusion (like direct replies)."
+                },
+                {
+                    "name": "recruit_reviewers",
+                    "signature": "recruit_reviewers(title, message, invitees=[], reviewers_name='Reviewers', remind=False, invitee_names=[], retry_declined=False, contact_info='', reduced_load_on_decline=None, allow_accept_with_reduced_load=False, default_load=0, allow_overlap_official_committee=False, accept_recruitment_template=None)",
+                    "docstring": "Send recruitment invitations to potential reviewers/committee members. Supports reminders, decline retries, and reduced load options."
+                },
+                {
+                    "name": "setup_committee_matching",
+                    "signature": "setup_committee_matching(committee_id=None, compute_affinity_scores=False, compute_conflicts=False, compute_conflicts_n_years=None, alternate_matching_group=None, submission_track=None)",
+                    "docstring": "Initialize automated assignment system for a committee. Optionally compute affinity scores, detect conflicts, and set up alternate matching groups."
+                },
+                {
+                    "name": "set_assignments",
+                    "signature": "set_assignments(assignment_title, committee_id, enable_reviewer_reassignment=False, overwrite=False)",
+                    "docstring": "Deploy computed assignments for a committee. Can enable reassignment and overwrite existing assignments."
+                },
+                {
+                    "name": "unset_assignments",
+                    "signature": "unset_assignments(assignment_title, committee_id)",
+                    "docstring": "Remove assignments for a committee based on assignment title."
+                },
+                {
+                    "name": "post_decisions",
+                    "signature": "post_decisions(decisions_file, api1_client=None)",
+                    "docstring": "Post decisions in bulk from CSV file. Format: paper_number,decision,comment. Posts decisions and updates request form status."
+                },
+                {
+                    "name": "post_decision_stage",
+                    "signature": "post_decision_stage(reveal_all_authors=False, reveal_authors_accepted=False, decision_heading_map=None, submission_readers=None, hide_fields=[])",
+                    "docstring": "Update submission visibility after decisions: set venue IDs, update readers, hide/reveal author information, generate bibtex."
+                },
+                {
+                    "name": "send_decision_notifications",
+                    "signature": "send_decision_notifications(decision_options, messages)",
+                    "docstring": "Send decision notification emails to authors with customized messages per decision type."
+                },
+                {
+                    "name": "set_track_sac_assignments",
+                    "signature": "set_track_sac_assignments(track_sac_file, conflict_policy=None, conflict_n_years=None, track_ac_file=None)",
+                    "docstring": "Assign senior area chairs to tracks from CSV. Optionally assign area chairs to SACs. Performs conflict checking."
+                },
+                {
+                    "name": "compute_reviewers_stats",
+                    "signature": "compute_reviewers_stats()",
+                    "docstring": "Calculate reviewer statistics: assignment count, review count, late days, discussion replies. Posts as tags."
+                },
+                {
+                    "name": "compute_acs_stats",
+                    "signature": "compute_acs_stats()",
+                    "docstring": "Calculate area chair statistics: assignment count, meta-review count, late days, discussion replies. Posts as tags."
+                },
+                {
+                    "name": "get_committee_names",
+                    "signature": "get_committee_names()",
+                    "docstring": "Get list of committee names based on venue configuration (reviewers, ACs, SACs)."
+                },
+                {
+                    "name": "get_roles",
+                    "signature": "get_roles()",
+                    "docstring": "Get all configured committee roles including ethics chairs and reviewers."
+                },
+                {
+                    "name": "get_submission_id",
+                    "signature": "get_submission_id()",
+                    "docstring": "Get the submission invitation ID."
+                },
+                {
+                    "name": "get_reviewers_id",
+                    "signature": "get_reviewers_id(number=None, anon=False, submitted=False)",
+                    "docstring": "Get reviewer group ID. Can get paper-specific, anonymous, or submitted reviewers group."
+                },
+                {
+                    "name": "get_area_chairs_id",
+                    "signature": "get_area_chairs_id(number=None, anon=False)",
+                    "docstring": "Get area chair group ID. Can get paper-specific or anonymous AC group."
+                },
+                {
+                    "name": "get_senior_area_chairs_id",
+                    "signature": "get_senior_area_chairs_id(number=None)",
+                    "docstring": "Get senior area chair group ID. Can get paper-specific SAC group."
+                },
+                {
+                    "name": "get_program_chairs_id",
+                    "signature": "get_program_chairs_id()",
+                    "docstring": "Get program chairs group ID."
+                },
+                {
+                    "name": "get_authors_id",
+                    "signature": "get_authors_id(number=None)",
+                    "docstring": "Get authors group ID. Can get paper-specific authors group."
+                },
+                {
+                    "name": "get_bid_id",
+                    "signature": "get_bid_id(committee_id)",
+                    "docstring": "Get bid invitation ID for a committee."
+                },
+                {
+                    "name": "get_assignment_id",
+                    "signature": "get_assignment_id(committee_id, deployed=False, invite=False)",
+                    "docstring": "Get assignment invitation ID. Can get proposed, deployed, or invite assignment IDs."
+                },
+                {
+                    "name": "get_recommendation_id",
+                    "signature": "get_recommendation_id(committee_id=None)",
+                    "docstring": "Get recommendation invitation ID for a committee (defaults to reviewers)."
+                },
+                {
+                    "name": "get_message_sender",
+                    "signature": "get_message_sender()",
+                    "docstring": "Generate email sender configuration with venue short name and valid notification email address."
+                },
+                {
+                    "name": "ithenticate_create_and_upload_submission",
+                    "signature": "ithenticate_create_and_upload_submission()",
+                    "docstring": "Create iThenticate submissions and upload PDFs for plagiarism checking. Requires iThenticate configuration."
+                },
+                {
+                    "name": "ithenticate_request_similarity_report",
+                    "signature": "ithenticate_request_similarity_report()",
+                    "docstring": "Request similarity reports from iThenticate for all uploaded submissions."
+                },
+                {
+                    "name": "poll_ithenticate_for_status",
+                    "signature": "poll_ithenticate_for_status()",
+                    "docstring": "Poll iThenticate for upload and similarity report status updates."
+                }
+            ]
+        },
     ]
     
     return classes
