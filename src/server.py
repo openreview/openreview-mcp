@@ -719,6 +719,170 @@ async def get_venue_class_details(ctx: Context) -> Dict[str, Any]:
 
 
 @mcp.tool()
+async def get_group_builder_details(ctx: Context) -> Dict[str, Any]:
+    """
+    Get comprehensive documentation for the GroupBuilder class used to manage venue group infrastructure.
+
+    USE THIS WHEN:
+    - User asks about creating or managing groups in OpenReview
+    - User mentions committee setup, reviewer groups, or area chair groups
+    - User needs to understand group permissions and access control
+    - User asks about venue infrastructure or organizational structure
+    - User wants to create paper-specific groups or administrative groups
+    - User asks about group hierarchy or group relationships
+    - User needs to understand the venue/domain group concept
+
+    THE GROUPBUILDER CLASS:
+    GroupBuilder is a helper class that creates and manages all groups (committees, roles, and organizational units)
+    needed to operate a conference or workshop on OpenReview. It works internally with the Venue class to materialize
+    the venue's organizational structure.
+
+    WHAT THIS TOOL PROVIDES:
+    - Complete GroupBuilder class documentation with detailed method descriptions
+    - Explanation of what groups are in OpenReview (committees, roles, paper-specific groups)
+    - Understanding of the venue/domain group (the root configuration group)
+    - Group hierarchy structure and organization
+    - Permission model for groups (readers, writers, signatures, signatories, members)
+    - Methods for creating different committee types
+    - Synchronization mechanism between Venue properties and the domain group
+    - Webfield and template-based workflows
+
+    COMMON USE CASES:
+    1. Understanding how venue groups are organized
+    2. Creating committee groups (reviewers, area chairs, program chairs)
+    3. Setting up paper-specific reviewer and AC groups
+    4. Managing recruitment groups (Invited/Declined)
+    5. Configuring group permissions and access control
+    6. Understanding the venue/domain group content structure
+    7. Working with external reviewer groups
+    8. Setting up preferred email access groups
+
+    KEY CONCEPTS:
+    - Venue/Domain Group: The root group containing all venue configuration
+    - Committee Groups: Reviewers, Area Chairs, Senior Area Chairs, Program Chairs
+    - Paper-Specific Groups: Reviewers for each submission
+    - Administrative Groups: Invited, Declined, Accepted authors
+    - Group Permissions: readers, writers, signatures, signatories, members
+    - Synchronization: create_venue_group() keeps OpenReview in sync with Venue properties
+
+    IMPORTANT NOTES:
+    - GroupBuilder is used internally by Venue - users typically don't instantiate it directly
+    - Access it via venue.group_builder after creating a Venue instance
+    - All group operations are idempotent (safe to run multiple times)
+    - The venue/domain group is the "source of truth" for venue configuration
+    - Groups are created lazily only when needed
+    - Paper-specific groups are created when submissions are received
+
+    Returns:
+        Complete GroupBuilder class documentation including all methods, concepts, and usage patterns
+    """
+    logger.info("Retrieving GroupBuilder class documentation")
+    await ctx.info("Providing comprehensive GroupBuilder class documentation for venue group management")
+
+    try:
+        classes = get_openreview_classes()
+        group_builder_class = next((c for c in classes if c["name"] == "GroupBuilder"), None)
+
+        if not group_builder_class:
+            error_msg = "GroupBuilder class not found in class definitions"
+            logger.error(error_msg)
+            await ctx.error(error_msg)
+            return {"error": error_msg}
+
+        logger.info("GroupBuilder class documentation retrieved successfully")
+        await ctx.info("GroupBuilder class documentation provided",
+                      extra={
+                          "method_count": len(group_builder_class.get("methods", [])),
+                          "module": group_builder_class.get("module")
+                      })
+
+        return {
+            "status": "success",
+            "class": group_builder_class,
+            "usage_notes": {
+                "access_pattern": [
+                    "GroupBuilder is automatically instantiated by the Venue class",
+                    "Access via venue.group_builder after creating a Venue instance",
+                    "Most users won't interact with GroupBuilder directly - it's used internally"
+                ],
+                "key_methods": [
+                    "create_venue_group() - Most important: synchronizes all venue settings to OpenReview",
+                    "create_program_chairs_group() - Create program chairs committee",
+                    "create_reviewers_group() - Create reviewer committee(s)",
+                    "create_area_chairs_group() - Create area chair committee(s)",
+                    "create_senior_area_chairs_group() - Create senior area chair committee(s)",
+                    "create_authors_group() - Create authors group and subgroups",
+                    "create_recruitment_committee_groups() - Create Invited/Declined tracking groups",
+                    "post_group() - Post any group edit to OpenReview"
+                ],
+                "group_hierarchy_example": [
+                    "ICML.cc/2025/Conference (venue/domain group)",
+                    "├── Program_Chairs",
+                    "├── Reviewers",
+                    "│   ├── Invited",
+                    "│   └── Declined",
+                    "├── Area_Chairs (if enabled)",
+                    "│   ├── Invited",
+                    "│   └── Declined",
+                    "├── Senior_Area_Chairs (if enabled)",
+                    "├── Authors",
+                    "│   └── Accepted",
+                    "├── Ethics_Chairs (if enabled)",
+                    "├── Ethics_Reviewers (if enabled)",
+                    "└── Publication_Chairs (if enabled)",
+                    "",
+                    "Paper-specific groups:",
+                    "ICML.cc/2025/Conference/Submission123/",
+                    "├── Reviewers",
+                    "├── Area_Chairs",
+                    "├── Senior_Area_Chairs",
+                    "└── Authors"
+                ],
+                "permission_model": [
+                    "readers: Who can see the group exists and read its member list",
+                    "writers: Who can modify the group",
+                    "signatures: Who created/modified the group",
+                    "signatories: Who can sign on behalf of the group",
+                    "members: Users who belong to the group"
+                ],
+                "venue_domain_group_content": [
+                    "The venue/domain group's content field stores critical configuration:",
+                    "- submission_id: ID of the submission invitation",
+                    "- meta_invitation_id: Root invitation for edits",
+                    "- program_chairs_id, reviewers_id, area_chairs_id: Committee IDs",
+                    "- Various invitation IDs for reviews, decisions, comments",
+                    "- Workflow configuration (public submissions, email settings)",
+                    "- Stage configurations (review_name, decision_name, etc.)"
+                ],
+                "important_notes": [
+                    "GroupBuilder is used internally by Venue class",
+                    "All group operations are idempotent - safe to run multiple times",
+                    "Groups are created lazily - only when needed",
+                    "Paper-specific groups are created when submissions are received",
+                    "The venue/domain group is the 'source of truth' for configuration",
+                    "create_venue_group() synchronizes Venue properties to OpenReview",
+                    "Use get_venue_class_details tool to see how Venue uses GroupBuilder"
+                ],
+                "related_components": [
+                    "Venue class - Main orchestrator that uses GroupBuilder",
+                    "InvitationBuilder - Uses group IDs to create invitations",
+                    "Recruitment system - Uses Invited/Declined groups",
+                    "Matching system - Uses committee groups for assignments"
+                ]
+            },
+            "metadata": {
+                "timestamp": datetime.datetime.now().isoformat(),
+                "module": group_builder_class.get("module"),
+                "method_count": len(group_builder_class.get("methods", []))
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error retrieving GroupBuilder class details: {str(e)}", exc_info=True)
+        await ctx.error(f"Failed to retrieve GroupBuilder class details: {str(e)}")
+        raise
+
+
+@mcp.tool()
 async def get_api_version_guide(ctx: Context) -> Dict[str, Any]:
     """
     CRITICAL: Understand the difference between OpenReview API 1 vs API 2 and which client to use.
@@ -942,6 +1106,7 @@ def main():
     print("  • get_function_details - Complete docs for a specific function")
     print("  • get_utility_tools - Advanced helper functions (batch operations)")
     print("  • get_venue_class_details - Venue class for conference management")
+    print("  • get_group_builder_details - GroupBuilder class for venue group infrastructure")
     print()
     print("⚠️  CRITICAL REFERENCE:")
     print("  • get_api_version_guide - API 1 vs API 2 decision guide (USE THIS FIRST!)")

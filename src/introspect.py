@@ -1864,8 +1864,293 @@ Special Features:
                 }
             ]
         },
+        {
+            "name": "GroupBuilder",
+            "docstring": """Helper class for building and managing OpenReview group infrastructure for a venue.
+
+The GroupBuilder class is responsible for creating and maintaining all the groups (committees, roles, and organizational units)
+needed to operate a conference or workshop on OpenReview. It works in conjunction with the Venue class to materialize the
+venue's organizational structure.
+
+WHAT IS A GROUP IN OPENREVIEW:
+Groups in OpenReview represent collections of users and serve multiple purposes:
+- Committees: Reviewers, Area Chairs, Senior Area Chairs, Program Chairs
+- Roles: Authors, Ethics Reviewers, Publication Chairs
+- Paper-specific groups: Reviewers for Paper 1, Area Chairs for Paper 2, etc.
+- Administrative groups: Invited reviewers, Declined reviewers, Accepted authors
+
+INSTANTIATION:
+The GroupBuilder is automatically instantiated by the Venue class and should not be created directly:
+```python
+venue = openreview.venue.Venue(client, 'ICML.cc/2025/Conference', 'openreview.net/Support')
+# GroupBuilder is available as venue.group_builder
+# Most users won't interact with GroupBuilder directly - it's used internally by Venue
+```
+
+THE VENUE/DOMAIN GROUP:
+The most important group created by GroupBuilder is the venue group itself (also called the domain group).
+This group:
+- Serves as the root of all venue-related groups
+- Contains metadata and configuration for the entire venue
+- Synchronizes its content with Venue class properties
+- Controls permissions and access for the venue
+
+CREATED BY create_venue_group():
+The venue group's content field stores critical configuration including:
+- submission_id: ID of the submission invitation
+- meta_invitation_id: Root invitation for edits
+- program_chairs_id: Program chairs group ID
+- reviewers_id, area_chairs_id, senior_area_chairs_id: Committee group IDs
+- Various invitation IDs for reviews, decisions, comments, etc.
+- Workflow configuration (public submissions, email settings, etc.)
+- Stage configurations (review_name, decision_name, etc.)
+
+SYNCHRONIZATION:
+Whenever venue properties change, create_venue_group() updates the domain group to reflect these changes.
+This ensures the OpenReview platform always has current venue configuration.
+
+GROUP HIERARCHY:
+GroupBuilder creates a hierarchical structure:
+```
+ICML.cc/2025/Conference (venue/domain group)
+├── Program_Chairs
+├── Reviewers
+│   ├── Invited
+│   └── Declined
+├── Area_Chairs (if use_area_chairs=True)
+│   ├── Invited
+│   └── Declined
+├── Senior_Area_Chairs (if use_senior_area_chairs=True)
+├── Authors
+│   └── Accepted
+├── Ethics_Chairs (if use_ethics_chairs=True)
+├── Ethics_Reviewers (if use_ethics_reviewers=True)
+└── Publication_Chairs (if use_publication_chairs=True)
+
+And for each submission:
+ICML.cc/2025/Conference/Submission123/
+├── Reviewers
+├── Area_Chairs
+├── Senior_Area_Chairs
+└── Authors
+```
+
+KEY METHODS:
+
+Venue Infrastructure:
+- create_venue_group(): Creates/updates the root venue group with all configuration
+- build_groups(): Creates parent groups in the hierarchy (e.g., ICML.cc, ICML.cc/2025)
+- add_to_active_venues(): Registers venue in the global active venues list
+
+Committee Groups:
+- create_program_chairs_group(): Creates the program chairs committee
+- create_reviewers_group(): Creates reviewer committees (supports multiple reviewer roles)
+- create_area_chairs_group(): Creates area chair committees (if enabled)
+- create_senior_area_chairs_group(): Creates senior area chair committees (if enabled)
+- create_ethics_reviewers_group(): Creates ethics reviewer committee
+- create_ethics_chairs_group(): Creates ethics chair committee
+- create_publication_chairs_group(): Creates publication chair committee
+
+Special Purpose Groups:
+- create_authors_group(): Creates authors group and accepted authors subgroup
+- create_recruitment_committee_groups(): Creates Invited/Declined subgroups for recruitment
+- set_external_reviewer_recruitment_groups(): Sets up external reviewer infrastructure
+- create_preferred_emails_readers_group(): Creates group for preferred email access
+
+Utility Methods:
+- post_group(): Posts a group edit to OpenReview
+- get_update_content(): Computes differences between current and new content
+- update_web_field(): Updates a group's web interface
+- get_reviewer_identity_readers(): Gets appropriate readers for reviewer identities
+- get_area_chair_identity_readers(): Gets appropriate readers for AC identities
+- set_impersonators(): Sets who can impersonate the venue group
+
+GROUP PERMISSIONS:
+GroupBuilder carefully manages permissions for each group:
+- readers: Who can see the group exists and read its member list
+- writers: Who can modify the group
+- signatures: Who created/modified the group
+- signatories: Who can sign on behalf of the group
+- members: Users who belong to the group
+
+Example permissions for reviewers group:
+```python
+Group(
+    id='ICML.cc/2025/Conference/Reviewers',
+    readers=[venue_id, senior_area_chairs_id, area_chairs_id, reviewers_id],
+    writers=[venue_id],  # Only venue can modify
+    signatures=[venue_id],
+    signatories=[venue_id],
+    members=[]  # Populated during recruitment
+)
+```
+
+TEMPLATE-BASED WORKFLOWS:
+For venues using OpenReview templates, GroupBuilder uses special invitations to trigger
+automated processes that create groups with pre-configured webfields and permissions.
+
+WEBFIELDS:
+Each group type gets a customized web interface (webfield) that provides:
+- Appropriate navigation and task lists
+- Filtered views of submissions and reviews
+- Committee-specific functionality
+- Proper visualization of the reviewing workflow
+
+SYNCHRONIZATION MECHANISM:
+The create_venue_group() method:
+1. Reads current venue group content from OpenReview
+2. Builds new content from Venue class properties
+3. Computes differences using get_update_content()
+4. Only posts updates if there are changes
+5. This keeps the OpenReview platform in sync with code
+
+IMPORTANT NOTES:
+- GroupBuilder is used internally by Venue - users typically don't call it directly
+- All group operations are idempotent - safe to run multiple times
+- Groups are created lazily - only when needed
+- Paper-specific groups are created when submissions are received
+- The venue group is the "source of truth" for venue configuration
+
+WORKFLOW INTEGRATION:
+GroupBuilder works with other Venue components:
+- InvitationBuilder uses group IDs to create invitations
+- Recruitment uses Invited/Declined groups to track recruitment status
+- Matching uses committee groups to assign reviewers
+- The venue group content is read by all these components
+
+:param venue: Venue instance that owns this GroupBuilder
+:type venue: openreview.venue.Venue""",
+            "module": "openreview.venue",
+            "methods": [
+                {
+                    "name": "__init__",
+                    "signature": "__init__(venue)",
+                    "docstring": "Initialize GroupBuilder with a Venue instance. Sets up client connections and extracts venue configuration."
+                },
+                {
+                    "name": "create_venue_group",
+                    "signature": "create_venue_group()",
+                    "docstring": "Create or update the root venue/domain group with complete configuration. This is the most important method - it synchronizes all venue settings to the OpenReview platform by updating the venue group's content field with IDs, settings, and workflow configuration."
+                },
+                {
+                    "name": "build_groups",
+                    "signature": "build_groups(venue_id)",
+                    "docstring": "Create parent groups in the hierarchy (e.g., 'ICML.cc', 'ICML.cc/2025'). Returns list of created groups."
+                },
+                {
+                    "name": "post_group",
+                    "signature": "post_group(group)",
+                    "docstring": "Post a group edit to OpenReview and return the updated group. Wraps client.post_group_edit with venue-specific metadata."
+                },
+                {
+                    "name": "get_update_content",
+                    "signature": "get_update_content(current_content, new_content)",
+                    "docstring": "Compute content differences between current and new group content. Returns only changed fields to minimize updates."
+                },
+                {
+                    "name": "update_web_field",
+                    "signature": "update_web_field(group_id, web)",
+                    "docstring": "Update a group's webfield (web interface code)."
+                },
+                {
+                    "name": "create_program_chairs_group",
+                    "signature": "create_program_chairs_group(program_chair_ids=[])",
+                    "docstring": "Create the Program Chairs group with specified members. Program chairs have administrative privileges over the venue."
+                },
+                {
+                    "name": "create_authors_group",
+                    "signature": "create_authors_group()",
+                    "docstring": "Create the Authors group (all submitting authors) and Authors/Accepted subgroup."
+                },
+                {
+                    "name": "create_reviewers_group",
+                    "signature": "create_reviewers_group()",
+                    "docstring": "Create reviewer committee groups. Supports multiple reviewer roles if configured in venue.reviewer_roles."
+                },
+                {
+                    "name": "create_area_chairs_group",
+                    "signature": "create_area_chairs_group()",
+                    "docstring": "Create area chair committee groups. Supports multiple AC roles if configured in venue.area_chair_roles."
+                },
+                {
+                    "name": "create_senior_area_chairs_group",
+                    "signature": "create_senior_area_chairs_group()",
+                    "docstring": "Create senior area chair committee groups. Supports multiple SAC roles if configured in venue.senior_area_chair_roles."
+                },
+                {
+                    "name": "create_ethics_reviewers_group",
+                    "signature": "create_ethics_reviewers_group()",
+                    "docstring": "Create ethics reviewers committee group for handling ethics reviews."
+                },
+                {
+                    "name": "create_ethics_chairs_group",
+                    "signature": "create_ethics_chairs_group()",
+                    "docstring": "Create ethics chairs committee group for managing ethics review process."
+                },
+                {
+                    "name": "create_publication_chairs_group",
+                    "signature": "create_publication_chairs_group(publication_chairs_ids)",
+                    "docstring": "Create publication chairs group with specified members. Publication chairs manage camera-ready submissions."
+                },
+                {
+                    "name": "create_preferred_emails_readers_group",
+                    "signature": "create_preferred_emails_readers_group()",
+                    "docstring": "Create group that controls who can read preferred email addresses of committee members."
+                },
+                {
+                    "name": "add_to_active_venues",
+                    "signature": "add_to_active_venues()",
+                    "docstring": "Register this venue in the global 'active_venues' group for venue discovery and monitoring."
+                },
+                {
+                    "name": "create_recruitment_committee_groups",
+                    "signature": "create_recruitment_committee_groups(committee_name)",
+                    "docstring": "Create Invited and Declined subgroups for a committee to track recruitment status."
+                },
+                {
+                    "name": "set_external_reviewer_recruitment_groups",
+                    "signature": "set_external_reviewer_recruitment_groups(name='External_Reviewers', create_paper_groups=False, is_ethics_reviewer=False)",
+                    "docstring": "Set up group infrastructure for external reviewer recruitment. Creates parent groups and optionally paper-specific groups."
+                },
+                {
+                    "name": "get_reviewer_identity_readers",
+                    "signature": "get_reviewer_identity_readers(number)",
+                    "docstring": "Get the list of groups that can read reviewer identities for a specific paper number."
+                },
+                {
+                    "name": "get_area_chair_identity_readers",
+                    "signature": "get_area_chair_identity_readers(number)",
+                    "docstring": "Get the list of groups that can read area chair identities for a specific paper number."
+                },
+                {
+                    "name": "get_senior_area_chair_identity_readers",
+                    "signature": "get_senior_area_chair_identity_readers(number)",
+                    "docstring": "Get the list of groups that can read senior area chair identities for a specific paper number."
+                },
+                {
+                    "name": "get_reviewer_paper_group_readers",
+                    "signature": "get_reviewer_paper_group_readers(number)",
+                    "docstring": "Get the list of groups that can read the reviewer group for a specific paper."
+                },
+                {
+                    "name": "get_reviewer_paper_group_writers",
+                    "signature": "get_reviewer_paper_group_writers(number)",
+                    "docstring": "Get the list of groups that can modify the reviewer group for a specific paper."
+                },
+                {
+                    "name": "get_area_chair_paper_group_readers",
+                    "signature": "get_area_chair_paper_group_readers(number)",
+                    "docstring": "Get the list of groups that can read the area chair group for a specific paper."
+                },
+                {
+                    "name": "set_impersonators",
+                    "signature": "set_impersonators(impersonators)",
+                    "docstring": "Set the list of users/groups who can impersonate the venue group."
+                }
+            ]
+        },
     ]
-    
+
     return classes
 
 
