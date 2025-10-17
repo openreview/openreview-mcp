@@ -49,12 +49,17 @@ mcp = FastMCP(
     instructions="""Expert assistant for the openreview-py Python library. Use this server when users need help with:
 - Writing Python code to interact with OpenReview's academic peer review platform
 - Understanding OpenReview API methods, classes, and data structures
+- Understanding the OpenReview data model (Notes, Groups, Invitations, Edges, Tags, Profiles)
 - Finding the right functions for tasks like retrieving submissions, reviews, profiles, venues
 - Learning about API 1 vs API 2 differences (CRITICAL: always check API version guide first!)
 - Searching for specific OpenReview operations by keyword or task
 - Getting complete documentation for OpenReview Python client methods
 
-IMPORTANT: If the user mentions venues, conferences, submissions, or API versions, ALWAYS use get_api_version_guide first to understand which client to use.""",
+IMPORTANT WORKFLOW:
+1. For understanding core entities (Notes, Groups, etc.): Use get_data_model_overview first
+2. For API version decisions (venues, conferences): Use get_api_version_guide first
+3. For finding specific methods: Use search_openreview_api or list_openreview_functions
+4. For detailed documentation: Use get_function_details or class-specific tools""",
     version="0.1.0"
 )
 
@@ -883,6 +888,310 @@ async def get_group_builder_details(ctx: Context) -> Dict[str, Any]:
 
 
 @mcp.tool()
+async def get_data_model_overview(ctx: Context) -> Dict[str, Any]:
+    """
+    Understand the OpenReview API 2 data model - the modular building blocks that power the platform.
+
+    USE THIS WHEN:
+    - User needs to understand the core entities in OpenReview (Notes, Groups, Invitations, Edges, Tags)
+    - User asks "what is a Note/Group/Invitation/Edge/Tag in OpenReview?"
+    - User is confused about how entities relate to each other
+    - User needs to understand access control (readers, nonreaders fields)
+    - User asks about the domain field or venue context
+    - User needs to understand how to create or modify entities (through Edits)
+    - User wants to know about dollar sign notation in invitations
+    - User asks about the content field structure
+    - Working with API 2 and need to understand the data model fundamentals
+
+    THE OPENREVIEW DATA MODEL:
+    OpenReview's data model consists of modular building blocks (like LEGO pieces) that can be combined
+    to create complex peer review workflows. The openreview-py library provides both direct access to
+    these building blocks via the OpenReview API and higher-level abstractions for common tasks.
+
+    UNIVERSAL PROPERTIES:
+    All entities in OpenReview share these properties:
+    - readers field: List of group IDs that can read this entity
+    - nonreaders field (optional): List of group IDs explicitly denied access
+    - domain field: Indicates which venue or context the entity belongs to
+
+    Invitations, Notes, Groups, and Edits can have a content field that stores arbitrary fields.
+    Each field in content has two parts:
+    - value: The actual data
+    - readers: List of group IDs allowed to read this specific field
+
+    Returns:
+        Comprehensive guide to all core entities with their purposes, relationships, and usage patterns
+    """
+    logger.info("Retrieving OpenReview data model overview")
+    await ctx.info("Providing comprehensive OpenReview API 2 data model overview")
+
+    overview = {
+        "summary": "OpenReview uses a modular data model with building blocks that can be combined to create complex peer review workflows",
+
+        "philosophy": {
+            "description": "Treat the data model as modular LEGO-like components",
+            "key_points": [
+                "Each block has a clear purpose",
+                "Real power comes from combining blocks to create custom workflows",
+                "openreview-py provides both direct API access and higher-level abstractions",
+                "API 2 introduces greater flexibility, clearer structure, and improved consistency"
+            ]
+        },
+
+        "universal_properties": {
+            "readers": {
+                "description": "List of group IDs that can read this entity",
+                "applies_to": "All entities",
+                "purpose": "Access control - who can see this data"
+            },
+            "nonreaders": {
+                "description": "List of group IDs explicitly denied access",
+                "applies_to": "All entities (optional)",
+                "purpose": "Fine-grained access control - explicit denials"
+            },
+            "domain": {
+                "description": "Indicates which venue or context this entity belongs to",
+                "applies_to": "All entities",
+                "purpose": "Organizational grouping and venue isolation",
+                "example": "ICML.cc/2025/Conference"
+            },
+            "content_field_structure": {
+                "description": "Invitations, Notes, Groups, and Edits can have arbitrary content fields",
+                "structure": {
+                    "value": "The actual data stored in the field",
+                    "readers": "List of group IDs allowed to read this specific field"
+                },
+                "purpose": "Fine-grained field-level access control within entities"
+            }
+        },
+
+        "core_entities": {
+            "invitations": {
+                "description": "Define the structure and validation rules for user input - they act as templates",
+                "key_concept": "Everything in OpenReview (including other invitations) must be created using an invitation",
+                "purpose": "Ensure all data entering the system is validated and consistent",
+                "special_feature": {
+                    "name": "Dollar sign notation",
+                    "format": "${<integer>/path/to/other/field/value}",
+                    "usage": "Allows values to be copied from one field to another dynamically using relative paths",
+                    "important_note": "Values are not copied from/within the invitation itself. It tells the backend that when an Edit is posted using the Invitation, the specified field value should be copied from another field in the same Edit"
+                },
+                "related_methods": [
+                    "get_invitation() - Retrieve a single invitation",
+                    "get_invitations() - List invitations with filters",
+                    "post_invitation_edit() - Create or modify invitations"
+                ]
+            },
+
+            "notes": {
+                "description": "Primary data containers in OpenReview - represent content and scholarly interaction",
+                "examples": [
+                    "Submissions/papers",
+                    "Reviews",
+                    "Meta-reviews",
+                    "Decisions",
+                    "Comments",
+                    "Rebuttals"
+                ],
+                "purpose": "Store the actual content of peer review workflows",
+                "key_fields": [
+                    "content: Dictionary of field_name -> {value, readers}",
+                    "forum: ID of the root note (typically the submission)",
+                    "replyto: ID of the note being replied to",
+                    "invitations: List of invitation IDs used to create this note",
+                    "signatures: Who signed/created this note"
+                ],
+                "related_methods": [
+                    "get_note() - Retrieve a single note",
+                    "get_notes() - List notes with filters",
+                    "post_note_edit() - Create or modify notes",
+                    "search_notes() - Full-text search for notes"
+                ]
+            },
+
+            "groups": {
+                "description": "Organize users and define permissions and roles in the system",
+                "purpose": "Manage access control and user organization",
+                "examples": [
+                    "Venue base group (uses venue ID as group ID)",
+                    "Committee groups: Reviewers, Area_Chairs, Authors (use venue ID as prefix)",
+                    "Paper-specific groups: Conference/Submission123/Reviewers",
+                    "Profile groups (created for each user profile)",
+                    "Email groups (created for each email address)"
+                ],
+                "key_concept": "Users automatically inherit permissions of any group they belong to",
+                "membership_rule": "Only groups can be members of other groups (hence profile groups and email groups)",
+                "key_fields": [
+                    "members: List of group IDs that belong to this group",
+                    "readers: Who can see this group and its members",
+                    "writers: Who can modify this group",
+                    "signatories: Who can sign on behalf of this group"
+                ],
+                "related_methods": [
+                    "get_group() - Retrieve a single group",
+                    "get_groups() - List groups with filters",
+                    "post_group_edit() - Create or modify groups",
+                    "add_members_to_group() - Add members to a group",
+                    "remove_members_from_group() - Remove members from a group"
+                ]
+            },
+
+            "edits": {
+                "description": "Used to create and modify Invitations, Groups, and Notes - the change mechanism",
+                "key_concept": "Invitations, Groups, and Notes cannot be created directly - only through Edits",
+                "types": [
+                    "Invitation Edits - Create/modify invitations",
+                    "Group Edits - Create/modify groups",
+                    "Note Edits - Create/modify notes"
+                ],
+                "workflow": [
+                    "1. Submit an Edit using an invitation",
+                    "2. Edit undergoes 'inference' process",
+                    "3. Final Invitation/Group/Note object is produced",
+                    "4. Result has 'invitations' field indicating which invitations were used"
+                ],
+                "version_control": {
+                    "description": "Edits preserve the complete history of changes",
+                    "mechanism": "Final object is produced from a sorted sequence of Edits ordered by tcdate (true creation date)",
+                    "modification": "Modifying an Edit (if permitted) will update the resulting object"
+                },
+                "access_control": {
+                    "description": "Edits can have reader permissions different from the Entity they create",
+                    "use_cases": [
+                        "Private changes",
+                        "Staged updates",
+                        "Fine-grained access control"
+                    ]
+                },
+                "related_methods": [
+                    "post_note_edit() - Create/modify notes via edits",
+                    "post_group_edit() - Create/modify groups via edits",
+                    "post_invitation_edit() - Create/modify invitations via edits",
+                    "get_note_edits() - Retrieve edit history for a note",
+                    "get_group_edits() - Retrieve edit history for a group"
+                ]
+            },
+
+            "edges": {
+                "description": "Lightweight connections between two entities - relationships and metadata",
+                "structure": {
+                    "head": "Source entity ID",
+                    "tail": "Target entity ID",
+                    "label": "Optional label describing the relationship",
+                    "weight": "Optional numeric weight/score"
+                },
+                "common_uses": [
+                    "Affinity scores (reviewer expertise for papers)",
+                    "Conflicts of interest",
+                    "Assignment relationships (reviewer -> paper)",
+                    "Custom quotas",
+                    "Matching data",
+                    "Recommendations"
+                ],
+                "purpose": "Represent relationships and scores between entities efficiently",
+                "related_methods": [
+                    "get_edge() - Retrieve a single edge",
+                    "get_edges() - List edges with filters",
+                    "post_edge() - Create a single edge",
+                    "post_edges() - Create multiple edges in bulk",
+                    "get_grouped_edges() - Get edges grouped by head/tail"
+                ]
+            },
+
+            "tags": {
+                "description": "Attach labels or weights to entities - flexible annotations",
+                "structure": {
+                    "tag": "Optional string label",
+                    "weight": "Optional numeric weight",
+                    "forum": "ID of the entity being tagged (e.g., Note ID)"
+                },
+                "common_uses": [
+                    "Decision labels (Accept, Reject)",
+                    "Confidence scores",
+                    "Rating values",
+                    "Custom classifications",
+                    "Statistical groupings"
+                ],
+                "purpose": "Group, filter, and analyze entities based on shared characteristics",
+                "related_methods": [
+                    "get_tag() - Retrieve a single tag",
+                    "get_tags() - List tags with filters",
+                    "post_tag() - Create a single tag",
+                    "post_tags() - Create multiple tags in bulk"
+                ]
+            },
+
+            "profiles": {
+                "description": "Store registered user identity and related information",
+                "key_fields": [
+                    "names: User's name variations",
+                    "emails: Confirmed and unconfirmed email addresses",
+                    "relations: Institutional affiliations and history",
+                    "history: Academic positions and career progression",
+                    "expertise: Research areas and topics"
+                ],
+                "purpose": [
+                    "Represent individual participants in the system",
+                    "Support conflict of interest detection",
+                    "Enable expertise matching for reviewer assignment"
+                ],
+                "related_methods": [
+                    "get_profile() - Retrieve a single profile",
+                    "get_profiles() - List profiles (limited to 1000)",
+                    "search_profiles() - Search for profiles by various criteria",
+                    "tools.get_profiles() - Batch fetch profiles (handles >1000 profiles)"
+                ]
+            },
+
+            "references": {
+                "description": "Similar to Edits but specifically used to create Profiles",
+                "key_concept": "A full Profile is composed by combining multiple References",
+                "purpose": "Allow profiles to evolve over time through incremental changes"
+            }
+        },
+
+        "entity_relationships": {
+            "invitations_to_edits": "Invitations define what Edits can be created and their structure",
+            "edits_to_entities": "Edits create/modify Invitations, Groups, and Notes through inference",
+            "notes_to_notes": "Notes can reply to other Notes (forum and replyto fields)",
+            "groups_to_groups": "Groups can contain other Groups as members",
+            "edges_to_entities": "Edges connect any two entities (Notes, Groups, Profiles)",
+            "tags_to_notes": "Tags annotate Notes with labels and weights",
+            "groups_to_permissions": "Groups define who can read/write/sign for entities"
+        },
+
+        "workflow_example": {
+            "scenario": "Creating a review for a submission",
+            "steps": [
+                "1. Venue creates a Review Invitation defining required fields (rating, confidence, summary, etc.)",
+                "2. Reviewer uses the Review Invitation to create a Note Edit",
+                "3. Note Edit specifies content, signatures (reviewer group), replyto (submission ID)",
+                "4. Backend performs inference on the Edit",
+                "5. Final Review Note is created and linked to the submission",
+                "6. Access control: Review readers might include authors, reviewers, ACs, PCs (depending on configuration)",
+                "7. Tags can be added to the review for metadata (e.g., 'official review' tag)"
+            ]
+        },
+
+        "tips_for_using_openreview_py": [
+            "Use list_openreview_classes() to see Python class definitions for these entities",
+            "Use search_openreview_api() to find methods for working with specific entities",
+            "Use get_api_version_guide() to understand API 1 vs API 2 before starting",
+            "Most entities are created via 'post_*_edit' methods (post_note_edit, post_group_edit, etc.)",
+            "Use 'get_*' methods to retrieve single entities, 'get_*s' for lists",
+            "Edges and Tags are created directly (post_edge, post_tag) not via Edits",
+            "Always check the 'readers' field to understand who can see data",
+            "Use the Venue and GroupBuilder classes for high-level conference management"
+        ]
+    }
+
+    logger.info("Data model overview provided")
+    await ctx.info("OpenReview data model overview retrieved successfully")
+
+    return overview
+
+
+@mcp.tool()
 async def get_api_version_guide(ctx: Context) -> Dict[str, Any]:
     """
     CRITICAL: Understand the difference between OpenReview API 1 vs API 2 and which client to use.
@@ -894,6 +1203,8 @@ async def get_api_version_guide(ctx: Context) -> Dict[str, Any]:
     - Working with venue request forms
     - Code involves baseurl parameters
     - You're unsure which API version to use
+
+    💡 TIP: For understanding the data model entities (Notes, Groups, etc.), use get_data_model_overview() first!
 
     WHY THIS IS CRITICAL:
     OpenReview has TWO separate APIs with different clients, base URLs, and data schemas:
@@ -1109,13 +1420,16 @@ def main():
     print("  • get_group_builder_details - GroupBuilder class for venue group infrastructure")
     print()
     print("⚠️  CRITICAL REFERENCE:")
-    print("  • get_api_version_guide - API 1 vs API 2 decision guide (USE THIS FIRST!)")
+    print("  • get_data_model_overview - OpenReview data model entities (Notes, Groups, Edits, etc.)")
+    print("  • get_api_version_guide - API 1 vs API 2 decision guide")
     print()
     print("🔧 ADMINISTRATION:")
     print("  • get_server_capabilities - List all available tools")
     print()
     print("=" * 80)
-    print("💡 TIP: Use get_api_version_guide when working with venues/conferences!")
+    print("💡 TIPS:")
+    print("   • Use get_data_model_overview to understand OpenReview entities")
+    print("   • Use get_api_version_guide when working with venues/conferences")
     print("=" * 80)
     print()
     
