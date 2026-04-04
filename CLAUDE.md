@@ -45,3 +45,107 @@ Running Tests:
 ```bash
 OPENREVIEW_KNOWLEDGE_PATH=/path/to/openreview-py .venv/bin/python -m pytest tests/ -v
 ```
+
+---
+
+## Helping Users Install the MCP Server
+
+When a user asks for help installing or setting up this MCP server, walk them through these steps interactively. Run the commands for them when possible, ask for confirmation on paths.
+
+### Step 1: Locate openreview-py
+
+Ask the user where their openreview-py clone is. Common locations:
+- `~/Documents/openreview-py`
+- `~/projects/openreview-py`
+- A sibling directory to this repo
+
+Verify it exists:
+```bash
+ls /path/to/openreview-py/openreview/__init__.py
+```
+
+### Step 2: Detect Python environment
+
+Check if the user has a conda env or virtualenv with openreview-py installed:
+```bash
+# Check for conda env
+conda env list 2>/dev/null | grep openreview
+# Or check for a virtualenv
+which python3
+pip show openreview-py
+```
+
+### Step 3: Install openreview-py as editable
+
+This is critical — the MCP server introspects docstrings from the installed openreview-py. It must be the local clone (editable), not the pip/GitHub version:
+```bash
+pip install -e /path/to/openreview-py
+```
+
+Verify the editable install:
+```bash
+pip show openreview-py | grep "Editable project location"
+```
+This MUST show the local path. If it doesn't, the MCP server will serve stale/empty docstrings.
+
+### Step 4: Install the MCP server
+
+```bash
+pip install -e /path/to/openreview-mcp
+```
+
+Verify:
+```bash
+which openreview-mcp
+```
+
+### Step 5: Create .mcp.json
+
+Create a `.mcp.json` file in the root of the project the user works in (usually openreview-py):
+
+If using conda, get the full binary path first:
+```bash
+conda run -n ENVNAME which openreview-mcp
+```
+
+Then create `.mcp.json`:
+```json
+{
+  "mcpServers": {
+    "openreview": {
+      "command": "/full/path/to/bin/openreview-mcp",
+      "env": {
+        "OPENREVIEW_KNOWLEDGE_PATH": "/path/to/openreview-py"
+      }
+    }
+  }
+}
+```
+
+If not using conda (plain pip install), the simpler form works:
+```json
+{
+  "mcpServers": {
+    "openreview": {
+      "command": "openreview-mcp",
+      "env": {
+        "OPENREVIEW_KNOWLEDGE_PATH": "/path/to/openreview-py"
+      }
+    }
+  }
+}
+```
+
+Note: `.mcp.json` is gitignored (contains machine-specific absolute paths). Each developer creates their own.
+
+### Step 6: Restart Claude Code
+
+Tell the user to restart Claude Code (`/exit` and relaunch) for it to pick up the new `.mcp.json`. After restart, the 5 openreview MCP tools will be available.
+
+### Step 7: Verify
+
+After restart, test that the tools work:
+- Search: `search_api("post note")` should return results
+- Signatures: `get_method_signature("post_note_edit")` should return a full docstring
+
+If `get_method_signature` returns an empty docstring, the editable install in Step 3 likely failed — re-check with `pip show openreview-py`.
