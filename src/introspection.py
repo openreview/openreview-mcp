@@ -19,6 +19,11 @@ TARGET_CLASSES = [
     ("openreview.journal", "Journal"),
 ]
 
+# Modules whose top-level functions should be introspected
+TARGET_MODULES = [
+    ("openreview.tools", "tools"),
+]
+
 
 def _extract_params(sig: inspect.Signature) -> list[dict[str, Any]]:
     """Extract parameter info from a signature."""
@@ -76,6 +81,38 @@ def introspect_library() -> dict[str, dict[str, dict[str, Any]]]:
 
         cache[class_name] = methods
 
+    # Introspect standalone functions from target modules
+    for module_path, label in TARGET_MODULES:
+        try:
+            module = importlib.import_module(module_path)
+        except ImportError:
+            continue
+
+        functions: dict[str, dict[str, Any]] = {}
+        for name, func in inspect.getmembers(module, predicate=inspect.isfunction):
+            if name.startswith("_"):
+                continue
+            if func.__module__ != module_path:
+                continue
+
+            try:
+                sig = inspect.signature(func)
+            except (ValueError, TypeError):
+                sig = None
+
+            docstring = inspect.getdoc(func)
+
+            functions[name] = {
+                "name": name,
+                "class_name": label,
+                "module": module_path,
+                "signature": str(sig) if sig else "()",
+                "params": _extract_params(sig) if sig else [],
+                "docstring": docstring,
+            }
+
+        cache[label] = functions
+
     return cache
 
 
@@ -90,10 +127,14 @@ def search_methods(
     Returns at most 15 results.
     """
     query_lower = query.lower()
+    query_words = query_lower.split()
     exact = []
     name_contains = []
     doc_contains = []
     param_contains = []
+
+    def _all_words_in(text: str) -> bool:
+        return all(w in text for w in query_words)
 
     classes_to_search = (
         {class_name: cache[class_name]} if class_name and class_name in cache else cache
@@ -104,13 +145,14 @@ def search_methods(
             if method_name == "__init__":
                 continue
 
-            if method_name.lower() == query_lower:
+            name_lower = method_name.lower()
+            if name_lower == query_lower:
                 exact.append(info)
-            elif query_lower in method_name.lower():
+            elif _all_words_in(name_lower.replace("_", " ")):
                 name_contains.append(info)
-            elif info.get("docstring") and query_lower in info["docstring"].lower():
+            elif info.get("docstring") and _all_words_in(info["docstring"].lower()):
                 doc_contains.append(info)
-            elif any(query_lower in p["name"].lower() for p in info.get("params", [])):
+            elif any(_all_words_in(p["name"].lower()) for p in info.get("params", [])):
                 param_contains.append(info)
 
     results = exact + name_contains + doc_contains + param_contains
