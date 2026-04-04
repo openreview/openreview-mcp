@@ -16,6 +16,7 @@ TARGET_CLASSES = [
     ("openreview.api.client", "Edit"),
     ("openreview.openreview", "Profile"),
     ("openreview.venue", "Venue"),
+    ("openreview.journal", "Journal"),
 ]
 
 
