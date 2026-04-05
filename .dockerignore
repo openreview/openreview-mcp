@@ -1,0 +1,11 @@
+.venv/
+.git/
+__pycache__/
+*.pyc
+.pytest_cache/
+.vscode/
+logs/
+*.log
+.mcp.json
+CLAUDE.md
+docs/superpowers/
