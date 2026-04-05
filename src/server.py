@@ -49,6 +49,17 @@ mcp = FastMCP(
 )
 
 
+# --- Plugin: live API tools (optional) ---
+try:
+    from openreview_tools import register_tools
+
+    if os.environ.get("OPENREVIEW_API_TOKEN"):
+        register_tools(mcp)
+        logger.info("Registered openreview-tools-mcp live API tools")
+except ImportError:
+    pass
+
+
 def _format_search_results(results: list[dict[str, Any]]) -> str:
     """Format search results as a readable string."""
     if not results:
