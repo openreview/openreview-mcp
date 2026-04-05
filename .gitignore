@@ -6,3 +6,4 @@ logs/
 *.log
 
 CLAUDE.md
+tools-plugin/

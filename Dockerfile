@@ -5,16 +5,22 @@ WORKDIR /app
 # Install git (needed for openreview-py git dependency)
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
-# Copy project files
+# Copy and install MCP server
 COPY pyproject.toml README.md ./
 COPY src/ src/
-
-# Install the MCP server and its dependencies (including openreview-py from git)
 RUN pip install --no-cache-dir .
 
-# Default knowledge path inside the container
-# Users mount their openreview-py clone to this path
-ENV OPENREVIEW_KNOWLEDGE_PATH=/knowledge
+# Install tools plugin if present (optional)
+# To include it: cp -r ../openreview-tools-mcp tools-plugin
+# Then build normally: docker build -t openreview-mcp .
+# Without it, the image works fine — just no live API tools.
+COPY tools-plugi[n] /tmp/tools-plugin/
+RUN if [ -f /tmp/tools-plugin/pyproject.toml ]; then \
+        pip install --no-cache-dir /tmp/tools-plugin/ && \
+        echo "openreview-tools-mcp plugin installed"; \
+    else \
+        echo "No tools plugin found, skipping"; \
+    fi && rm -rf /tmp/tools-plugin
 
-# The MCP server uses stdio transport
+ENV OPENREVIEW_KNOWLEDGE_PATH=/knowledge
 ENTRYPOINT ["openreview-mcp"]
