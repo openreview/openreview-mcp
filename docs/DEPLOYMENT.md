@@ -53,12 +53,9 @@ sudo journalctl -u openreview-mcp -n 100 --no-pager
 ```
 ---
 
-## Option 2: Docker (Future Enhancement)
+## Option 2: Docker
 
-Docker deployment is planned but not yet implemented. This would provide:
-- Isolated environment
-- Easy deployment across platforms
-- Container orchestration support (Kubernetes, etc.)
+See the [Quick Start](../README.md#quick-start) in the README for Docker build and Claude Code integration instructions.
 
 ---
 
