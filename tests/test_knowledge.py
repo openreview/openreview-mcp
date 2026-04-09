@@ -2,7 +2,7 @@
 
 import os
 import pytest
-from src.knowledge import KnowledgeBase, load_knowledge, search_best_practices, search_examples, get_workflow
+from openreview_mcp.knowledge import KnowledgeBase, load_knowledge, search_best_practices, search_examples, get_workflow
 
 
 class TestLoadKnowledge:

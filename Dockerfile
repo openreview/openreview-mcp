@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
 # Copy and install MCP server
 COPY pyproject.toml README.md ./
-COPY src/ src/
+COPY openreview_mcp/ openreview_mcp/
 RUN pip install --no-cache-dir .
 
 # Install tools plugin if present (optional)

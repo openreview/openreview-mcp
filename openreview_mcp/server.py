@@ -6,8 +6,8 @@ from typing import Any
 
 from fastmcp import FastMCP
 
-from src.introspection import introspect_library, search_methods, get_method_details
-from src.knowledge import load_knowledge, search_best_practices, search_examples, get_workflow
+from openreview_mcp.introspection import introspect_library, search_methods, get_method_details
+from openreview_mcp.knowledge import load_knowledge, search_best_practices, search_examples, get_workflow
 
 logger = logging.getLogger("openreview_mcp")
 

@@ -1,7 +1,7 @@
 """Tests for live introspection of the openreview-py library."""
 
 import pytest
-from src.introspection import introspect_library, search_methods, get_method_details
+from openreview_mcp.introspection import introspect_library, search_methods, get_method_details
 
 
 @pytest.fixture(scope="module")

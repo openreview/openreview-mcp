@@ -1,6 +1,6 @@
 """Tests for MCP tools — calls underlying tool functions directly."""
 
-from src.server import search_api, get_method_signature, get_best_practices, get_code_example, get_workflow_guide
+from openreview_mcp.server import search_api, get_method_signature, get_best_practices, get_code_example, get_workflow_guide
 
 
 def test_search_api_returns_results():
