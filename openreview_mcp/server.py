@@ -12,10 +12,10 @@ from openreview_mcp.knowledge import load_knowledge, search_best_practices, sear
 logger = logging.getLogger("openreview_mcp")
 
 # --- Configuration ---
-KNOWLEDGE_PATH = os.environ.get(
-    "OPENREVIEW_KNOWLEDGE_PATH",
-    os.path.join(os.path.dirname(__file__), "..", "..", "openreview-py"),
+_BUNDLED_KNOWLEDGE_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "knowledge_files"
 )
+KNOWLEDGE_PATH = os.environ.get("OPENREVIEW_KNOWLEDGE_PATH", _BUNDLED_KNOWLEDGE_DIR)
 MCP_HOST = os.environ.get("MCP_HOST", "localhost")
 MCP_PORT = int(os.environ.get("MCP_PORT", "4000"))
 

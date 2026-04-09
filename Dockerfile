@@ -22,5 +22,6 @@ RUN if [ -f /tmp/tools-plugin/pyproject.toml ]; then \
         echo "No tools plugin found, skipping"; \
     fi && rm -rf /tmp/tools-plugin
 
-ENV OPENREVIEW_KNOWLEDGE_PATH=/knowledge
+# Knowledge files are bundled inside the package. To override with a live
+# openreview-py clone, pass -e OPENREVIEW_KNOWLEDGE_PATH=/path at runtime.
 ENTRYPOINT ["openreview-mcp"]
