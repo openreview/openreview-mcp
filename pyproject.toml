@@ -8,7 +8,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "fastmcp>=0.1.0",
+    "fastmcp>=3.2",
     "openreview-py @ git+https://github.com/openreview/openreview-py.git",
 ]
 
