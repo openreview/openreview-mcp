@@ -8,7 +8,8 @@ and mount the tools onto their own server.
 
 import logging
 import os
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from fastmcp import FastMCP
 
@@ -80,7 +81,7 @@ def _format_method_details(results: list[dict[str, Any]]) -> str:
 def register_knowledge_tools(
     mcp: FastMCP,
     knowledge_path: str | None = None,
-) -> dict[str, Callable]:
+) -> dict[str, Callable[..., str]]:
     """Register the 5 knowledge tools onto the given FastMCP instance.
 
     Reads/introspects the installed `openreview-py` and loads the bundled (or

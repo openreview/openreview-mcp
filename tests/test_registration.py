@@ -1,6 +1,7 @@
 """Tests that register_knowledge_tools mounts all 5 knowledge tools onto a FastMCP instance."""
 
 import asyncio
+import os
 
 from fastmcp import FastMCP
 
@@ -45,3 +46,22 @@ class TestRegisterKnowledgeTools:
 
         result = handles["search_api"](query="post_note")
         assert "post_note_edit" in result
+
+    def test_knowledge_path_override_takes_precedence(self, tmp_path, monkeypatch):
+        """An explicit knowledge_path arg must override the env var and bundled default.
+
+        Points at tests/fixtures/ and verifies a tool response contains fixture-only
+        content — proving the override is routed through to the knowledge loader.
+        """
+        # Even with the env var set to a wrong location, the explicit arg wins.
+        monkeypatch.setenv("OPENREVIEW_KNOWLEDGE_PATH", str(tmp_path / "wrong"))
+
+        fixtures_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "fixtures"
+        )
+        mcp = FastMCP("test")
+        handles = register_knowledge_tools(mcp, knowledge_path=fixtures_dir)
+
+        # The fixture llm.txt has an "Authentication" section mentioning "Token auth"
+        result = handles["get_best_practices"](topic="Authentication")
+        assert "Token auth" in result
