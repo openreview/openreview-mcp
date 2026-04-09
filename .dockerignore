@@ -12,9 +12,3 @@ CLAUDE.md
 docs/
 tests/
 uv.lock
-tools-plugin/.venv/
-tools-plugin/.git/
-tools-plugin/__pycache__/
-tools-plugin/*.egg-info/
-tools-plugin/tests/
-tools-plugin/.pytest_cache/

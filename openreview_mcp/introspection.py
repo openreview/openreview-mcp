@@ -127,7 +127,9 @@ def search_methods(
     Returns at most 15 results.
     """
     query_lower = query.lower()
-    query_words = query_lower.split()
+    # Normalize underscores to spaces so "post_note" tokenizes as ["post", "note"]
+    # and matches method names like "post_note_edit" via the name-contains check.
+    query_words = query_lower.replace("_", " ").split()
     exact = []
     name_contains = []
     doc_contains = []

@@ -13,7 +13,7 @@ Minimal fixture versions of the static knowledge files, used exclusively by `tes
 
 ## Editing rules
 
-These are **test fixtures, not live knowledge**. The real `llm.txt` and `examples.md` live in the `openreview-py` repo (referenced via `OPENREVIEW_KNOWLEDGE_PATH`).
+These are **test fixtures, not live knowledge**. The real `llm.txt` and `examples.md` are bundled inside the package at `openreview_mcp/knowledge_files/` (copied verbatim from the upstream `openreview-py` repo at release time). The `OPENREVIEW_KNOWLEDGE_PATH` env var can still override the bundled default at runtime for development against a live checkout.
 
 Before editing either file, grep `tests/test_knowledge.py` and `tests/test_tools.py` for the asserted strings — tests will silently drift if you add or remove sections. In particular:
 

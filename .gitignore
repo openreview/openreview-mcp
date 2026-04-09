@@ -4,5 +4,3 @@ __pycache__/
 
 logs/
 *.log
-
-tools-plugin/
