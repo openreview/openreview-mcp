@@ -1,9 +1,9 @@
 """Reusable registration of the knowledge tools onto a FastMCP instance.
 
 This module has zero import side effects — no module-level FastMCP is created,
-no knowledge is loaded at import time. Downstream consumers (e.g.
-openreview-tools-mcp) can safely `from openreview_mcp import register_knowledge_tools`
-and mount the tools onto their own server.
+no knowledge is loaded at import time. Downstream consumers can safely
+`from openreview_mcp import register_knowledge_tools` and mount the tools
+onto their own FastMCP instance.
 """
 
 import logging

@@ -10,12 +10,6 @@ MCP server that helps LLMs write correct `openreview-py` code. Two knowledge lay
 docker build -t openreview-mcp /path/to/openreview-mcp
 ```
 
-**With the optional tools plugin** (adds live API tools):
-```bash
-cp -r /path/to/openreview-tools-mcp /path/to/openreview-mcp/tools-plugin
-docker build -t openreview-mcp /path/to/openreview-mcp
-```
-
 ### 2. Add to Claude Code
 
 Create a `.mcp.json` file in the root of the project you're working in (or in `~/.claude/` for global access):
@@ -25,17 +19,13 @@ Create a `.mcp.json` file in the root of the project you're working in (or in `~
   "mcpServers": {
     "openreview": {
       "command": "docker",
-      "args": [
-        "run", "--rm", "-i",
-        "-v", "/path/to/openreview-py:/knowledge",
-        "openreview-mcp"
-      ]
+      "args": ["run", "--rm", "-i", "openreview-mcp"]
     }
   }
 }
 ```
 
-The `-v` flag mounts your local openreview-py directory (which contains `llm.txt` and `examples.md`) into the container at `/knowledge`.
+Knowledge files (`llm.txt`, `examples.md`) are bundled inside the image — no bind-mount required. To override with a live openreview-py checkout, add `-e OPENREVIEW_KNOWLEDGE_PATH=/knowledge -v /path/to/openreview-py:/knowledge` to the `docker run` args.
 
 ### 3. Restart and verify
 
