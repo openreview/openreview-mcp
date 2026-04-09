@@ -171,13 +171,13 @@ Potential improvements:
 ## Maintenance
 
 When updating this guide:
-1. Update `get_api_version_guide` tool in `src/server.py`
+1. Update `get_api_version_guide` tool in `openreview_mcp/server.py`
 2. Test with real scenarios
 3. Update this documentation
 4. Consider adding to `get_openreview_overview` if major changes
 
 ## Related Files
 
-- `src/server.py` - Contains `get_api_version_guide` tool implementation
-- `src/introspect.py` - Contains `get_library_overview` with API version references
+- `openreview_mcp/server.py` - Contains `get_api_version_guide` tool implementation
+- `openreview_mcp/introspection.py` - Contains `get_library_overview` with API version references
 - `DEPLOYMENT.md` - Production deployment guide (updated ports to 3000)

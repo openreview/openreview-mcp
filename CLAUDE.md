@@ -1,32 +1,42 @@
 Project Overview & Context:
-This project is an MCP server built with FastMCP that helps LLMs write correct openreview-py code. It provides two knowledge layers: live introspection of the installed openreview-py library (method signatures, docstrings, class structures) and static knowledge files (best practices, code examples, workflow guides). The server exposes 5 tools that LLM clients use to find API methods, understand best practices, get code examples, and follow workflow patterns. Built with Python 3.11+ and uv package manager.
+This project is an MCP server built with FastMCP that helps LLMs write correct openreview-py code. It provides two knowledge layers: live introspection of the installed openreview-py library (method signatures, docstrings, class structures) and static knowledge files (best practices, code examples, workflow guides — bundled inside the package). The server exposes 5 tools that LLM clients use to find API methods, understand best practices, get code examples, and follow workflow patterns. Built with Python 3.11+.
 
 Project Structure:
 ```
 openreview-mcp/
-├── src/
-│   ├── server.py           # FastMCP server + 5 tool definitions
-│   ├── introspection.py    # Live introspection of openreview-py via inspect module
-│   ├── knowledge.py        # Static knowledge parser (llm.txt + examples.md)
-│   └── __init__.py
+├── openreview_mcp/
+│   ├── __init__.py             # Re-exports register_knowledge_tools
+│   ├── registration.py         # Reusable register_knowledge_tools(mcp) — zero import side effects
+│   ├── server.py               # Thin FastMCP standalone entry point
+│   ├── introspection.py        # Live introspection via inspect module
+│   ├── knowledge.py            # Static knowledge parser (llm.txt + examples.md)
+│   └── knowledge_files/
+│       ├── llm.txt             # Bundled best-practices source
+│       └── examples.md         # Bundled code-examples source
 ├── tests/
-│   ├── test_introspection.py  # Layer 1: introspection unit tests
-│   ├── test_knowledge.py      # Layer 2: knowledge parsing unit tests
-│   ├── test_tools.py          # Layer 3: MCP tool integration tests
-│   ├── conftest.py            # Shared fixtures
-│   └── fixtures/              # Test fixture files
+│   ├── conftest.py             # Shared fixtures
+│   ├── test_introspection.py   # Layer 1: introspection unit tests
+│   ├── test_knowledge.py       # Layer 2: knowledge parsing unit tests
+│   ├── test_bundled_knowledge.py  # Release-time bundling regression guard
+│   ├── test_registration.py    # Tests for register_knowledge_tools
+│   ├── test_tools.py           # Layer 3: tool behavior via FastMCP fixture
+│   └── fixtures/               # Minimal test fixture files
 ├── docs/
 │   ├── DEPLOYMENT.md
-│   └── superpowers/specs/     # Design specs
+│   └── superpowers/            # Specs and plans
+├── Dockerfile
 ├── pyproject.toml
 ├── CLAUDE.md
 └── README.md
 ```
 
-Key files: `src/server.py` (tool definitions), `src/introspection.py` (live introspection), `src/knowledge.py` (static knowledge).
+Key files: `openreview_mcp/registration.py` (the reusable `register_knowledge_tools` function that defines the 5 tools as closures), `openreview_mcp/server.py` (thin standalone entry point), `openreview_mcp/introspection.py` (live introspection), `openreview_mcp/knowledge.py` (static knowledge parser).
+
+Public API:
+- `from openreview_mcp import register_knowledge_tools` — mounts the 5 knowledge tools onto any FastMCP instance. Zero import side effects (introspection and knowledge loading happen at call time, not import). Returns a `dict[str, Callable[..., str]]` of tool handles keyed by name. Downstream consumers can import and use this to combine the knowledge tools with their own MCP tools on a single server.
 
 Environment Variables:
-- `OPENREVIEW_KNOWLEDGE_PATH`: path to directory containing `llm.txt` and `examples.md` (defaults to `../../openreview-py` relative to src/)
+- `OPENREVIEW_KNOWLEDGE_PATH` (optional): path to a directory containing `llm.txt` and `examples.md`. Defaults to the bundled `openreview_mcp/knowledge_files/` directory. Set this to override with a live openreview-py checkout during development.
 
 Tools (5 total):
 1. `search_api(query, class_name?)` — Search methods/classes by keyword with relevance ranking
@@ -40,11 +50,14 @@ Code Style & Conventions:
 - Docstrings on all public functions
 - Avoid redundant information in tool output — LLMs need concise, non-repetitive context
 - Use decorators (`@mcp.tool()`) to register tools
+- Tool closures live inside `register_knowledge_tools` to keep side effects at call-time
 
 Running Tests:
 ```bash
-OPENREVIEW_KNOWLEDGE_PATH=/path/to/openreview-py .venv/bin/python -m pytest tests/ -v
+.venv/bin/python -m pytest tests/ -v
 ```
+
+No environment variables required — tests use the bundled knowledge files. Set `OPENREVIEW_KNOWLEDGE_PATH=/path/to/openreview-py` only if you want to verify against a live upstream checkout.
 
 ---
 
@@ -113,10 +126,7 @@ Then create `.mcp.json`:
 {
   "mcpServers": {
     "openreview": {
-      "command": "/full/path/to/bin/openreview-mcp",
-      "env": {
-        "OPENREVIEW_KNOWLEDGE_PATH": "/path/to/openreview-py"
-      }
+      "command": "/full/path/to/bin/openreview-mcp"
     }
   }
 }
@@ -127,12 +137,16 @@ If not using conda (plain pip install), the simpler form works:
 {
   "mcpServers": {
     "openreview": {
-      "command": "openreview-mcp",
-      "env": {
-        "OPENREVIEW_KNOWLEDGE_PATH": "/path/to/openreview-py"
-      }
+      "command": "openreview-mcp"
     }
   }
+}
+```
+
+Knowledge files (`llm.txt`, `examples.md`) are bundled inside the package, so no `env` block is required for a basic setup. If the user wants to point at a live `openreview-py` checkout for development (so edits to `llm.txt` / `examples.md` upstream are picked up without re-syncing), add an `env` block:
+```json
+"env": {
+  "OPENREVIEW_KNOWLEDGE_PATH": "/path/to/openreview-py"
 }
 ```
 

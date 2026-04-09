@@ -14,7 +14,7 @@ systemd is the best option for production Linux servers. It provides automatic r
    # - User=your-username
    # - WorkingDirectory=/path/to/openreview-mcp
    # - Environment="PATH=/path/to/openreview-mcp/.venv/bin:..."
-   # - ExecStart=/path/to/openreview-mcp/.venv/bin/python -m src.server
+   # - ExecStart=/path/to/openreview-mcp/.venv/bin/python -m openreview_mcp.server
    ```
 
 2. **Create log directory**:
