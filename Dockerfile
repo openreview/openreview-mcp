@@ -12,4 +12,5 @@ RUN pip install --no-cache-dir .
 
 # Knowledge files are bundled inside the package. To override with a live
 # openreview-py clone, pass -e OPENREVIEW_KNOWLEDGE_PATH=/path at runtime.
+EXPOSE 8080
 ENTRYPOINT ["openreview-mcp"]

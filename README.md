@@ -12,17 +12,17 @@ MCP server that helps LLMs write correct `openreview-py` code. Two knowledge lay
 | `get_code_example` | Retrieve code examples for common operations |
 | `get_workflow_guide` | Get step-by-step workflow guides |
 
-## Quick Start
+## Usage
 
-### 1. Build the Docker image
+### Option 1: Local Docker (stdio)
+
+Build and use directly with Claude Code:
 
 ```bash
 docker build -t openreview-mcp .
 ```
 
-### 2. Add to Claude Code
-
-Create a `.mcp.json` file in the root of the project you're working in (or in `~/.claude/` for global access):
+Add to `.mcp.json`:
 
 ```json
 {
@@ -35,11 +35,57 @@ Create a `.mcp.json` file in the root of the project you're working in (or in `~
 }
 ```
 
-Knowledge files (`llm.txt`, `examples.md`) are bundled inside the image — no bind-mount required. To override with a live openreview-py checkout, add `-e OPENREVIEW_KNOWLEDGE_PATH=/knowledge -v /path/to/openreview-py:/knowledge` to the `docker run` args.
-
-### 3. Restart and verify
-
 Restart Claude Code (`/exit` and relaunch). The 5 tools will be available immediately.
+
+### Option 2: Local Docker service (SSE)
+
+Run as a persistent local service:
+
+```bash
+docker run -d --name openreview-mcp -p 8080:8080 openreview-mcp --transport sse
+```
+
+Add to `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "openreview": {
+      "url": "http://localhost:8080/sse"
+    }
+  }
+}
+```
+
+### Option 3: Remote server (public)
+
+Deploy to any host that can run Docker (Cloud Run, Fly.io, a VM, etc.):
+
+```bash
+docker run -d -p 8080:8080 openreview-mcp --transport streamable-http
+```
+
+Clients connect via `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "openreview": {
+      "url": "https://your-server.example.com/mcp"
+    }
+  }
+}
+```
+
+No API token is needed — this server provides knowledge tools only (read-only, no live API access).
+
+### CLI options
+
+```
+openreview-mcp [--transport stdio|sse|streamable-http] [--port 8080] [--host 0.0.0.0]
+```
+
+Knowledge files (`llm.txt`, `examples.md`) are bundled inside the image — no bind-mount required. To override with a live openreview-py checkout, add `-e OPENREVIEW_KNOWLEDGE_PATH=/knowledge -v /path/to/openreview-py:/knowledge` to the `docker run` args.
 
 ## Reusable Registration
 
