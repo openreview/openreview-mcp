@@ -12,8 +12,3 @@ def fixtures_dir():
 @pytest.fixture
 def llm_txt_path():
     return os.path.join(FIXTURES_DIR, "llm.txt")
-
-
-@pytest.fixture
-def examples_md_path():
-    return os.path.join(FIXTURES_DIR, "examples.md")

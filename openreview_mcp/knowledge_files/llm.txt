@@ -4,7 +4,6 @@
 > Manages peer review workflows for conferences (NeurIPS, ICLR, ICML, AAAI, etc.) and journals (TMLR, JMLR, DMLR, etc.).
 > Covers the full lifecycle: submission, review, assignment, decision, publication.
 > Install: `pip install openreview-py`
-> See examples.md for code snippets.
 
 ## Two API Versions
 

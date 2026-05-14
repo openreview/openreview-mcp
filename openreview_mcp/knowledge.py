@@ -1,15 +1,14 @@
-"""Static knowledge parser for llm.txt and examples.md."""
+"""Static knowledge parser for llm.txt."""
 
-import re
+import os
 from dataclasses import dataclass, field
 
 
 @dataclass
 class KnowledgeBase:
-    """Indexed sections from llm.txt and examples.md."""
+    """Indexed sections parsed from llm.txt."""
 
     practices: dict[str, str] = field(default_factory=dict)
-    examples: dict[str, str] = field(default_factory=dict)
 
 
 def _parse_sections(content: str, level: str = "## ") -> dict[str, str]:
@@ -36,27 +35,15 @@ def _parse_sections(content: str, level: str = "## ") -> dict[str, str]:
     return sections
 
 
-def load_knowledge(llm_txt_path: str, examples_md_path: str) -> KnowledgeBase:
-    """Parse llm.txt and examples.md into an indexed KnowledgeBase."""
-    if not _file_exists(llm_txt_path):
+def load_knowledge(llm_txt_path: str) -> KnowledgeBase:
+    """Parse llm.txt into an indexed KnowledgeBase."""
+    if not os.path.isfile(llm_txt_path):
         raise FileNotFoundError(f"llm.txt not found at: {llm_txt_path}")
-    if not _file_exists(examples_md_path):
-        raise FileNotFoundError(f"examples.md not found at: {examples_md_path}")
 
-    with open(llm_txt_path, "r") as f:
+    with open(llm_txt_path) as f:
         llm_content = f.read()
-    with open(examples_md_path, "r") as f:
-        examples_content = f.read()
 
-    return KnowledgeBase(
-        practices=_parse_sections(llm_content, "## "),
-        examples=_parse_sections(examples_content, "## "),
-    )
-
-
-def _file_exists(path: str) -> bool:
-    import os
-    return os.path.isfile(path)
+    return KnowledgeBase(practices=_parse_sections(llm_content, "## "))
 
 
 def search_best_practices(topic: str, kb: KnowledgeBase) -> str:
@@ -81,48 +68,3 @@ def _all_words_match(query: str, text: str) -> bool:
     words = query.lower().split()
     text_lower = text.lower()
     return all(word in text_lower for word in words)
-
-
-def search_examples(operation: str, kb: KnowledgeBase) -> str:
-    """Search examples.md sections by operation keyword."""
-    matches = []
-
-    for header, content in kb.examples.items():
-        if _all_words_match(operation, header) or _all_words_match(operation, content):
-            matches.append(content)
-
-    if not matches:
-        return ""
-    return "\n\n---\n\n".join(matches)
-
-
-def get_workflow(workflow_type: str, kb: KnowledgeBase) -> str:
-    """Get workflow guide combining practices and examples.
-
-    For 'conference' or 'journal': returns the full workflow section + matching examples.
-    For a specific stage: returns matching content from both.
-    """
-    parts = []
-
-    # Search practices for workflow section
-    for header, content in kb.practices.items():
-        if _all_words_match(workflow_type, header):
-            parts.append(content)
-
-    # Search examples for matching code
-    for header, content in kb.examples.items():
-        if _all_words_match(workflow_type, header):
-            parts.append(content)
-
-    # If no direct match, search content for the keyword
-    if not parts:
-        for header, content in kb.practices.items():
-            if _all_words_match(workflow_type, content):
-                parts.append(content)
-        for header, content in kb.examples.items():
-            if _all_words_match(workflow_type, content):
-                parts.append(content)
-
-    if not parts:
-        return ""
-    return "\n\n---\n\n".join(parts)

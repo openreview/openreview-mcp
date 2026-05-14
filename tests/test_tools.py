@@ -1,4 +1,4 @@
-"""Tests for the 5 MCP knowledge tools via register_knowledge_tools."""
+"""Tests for the MCP knowledge tools via register_knowledge_tools."""
 
 import pytest
 from fastmcp import FastMCP
@@ -50,19 +50,3 @@ def test_get_method_signature_labels_api_version(tools):
 def test_get_best_practices_returns_section(tools):
     text = tools["get_best_practices"](topic="authentication")
     assert "token" in text.lower()
-
-
-def test_get_code_example_returns_snippet(tools):
-    text = tools["get_code_example"](operation="submit paper")
-    assert "post_note_edit" in text
-    assert "```python" in text
-
-
-def test_get_workflow_guide_conference(tools):
-    text = tools["get_workflow_guide"](workflow_type="conference")
-    assert "Venue Request" in text or "Deploy" in text
-
-
-def test_get_workflow_guide_journal(tools):
-    text = tools["get_workflow_guide"](workflow_type="journal")
-    assert "Submit" in text or "Review" in text

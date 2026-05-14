@@ -19,10 +19,8 @@ from openreview_mcp.introspection import (
     search_methods,
 )
 from openreview_mcp.knowledge import (
-    get_workflow,
     load_knowledge,
     search_best_practices,
-    search_examples,
 )
 from openreview_mcp.tests_index import (
     build_test_index,
@@ -126,9 +124,9 @@ def register_knowledge_tools(
 
     Args:
         mcp: The FastMCP server to register tools on.
-        knowledge_path: Optional directory containing llm.txt and examples.md.
+        knowledge_path: Optional directory containing llm.txt.
             Falls back to the OPENREVIEW_KNOWLEDGE_PATH env var, then to the
-            knowledge files bundled inside the package.
+            bundled knowledge file inside the package.
         tests_path: Optional path to an openreview-py `tests/` directory.
             Falls back to OPENREVIEW_TESTS_PATH, then to `{knowledge_path}/tests/`
             when that subdir exists.
@@ -148,14 +146,9 @@ def register_knowledge_tools(
     )
 
     logger.info("Loading knowledge from %s", resolved_path)
-    knowledge_base = load_knowledge(
-        os.path.join(resolved_path, "llm.txt"),
-        os.path.join(resolved_path, "examples.md"),
-    )
+    knowledge_base = load_knowledge(os.path.join(resolved_path, "llm.txt"))
     logger.info(
-        "Loaded %d practice sections, %d example sections",
-        len(knowledge_base.practices),
-        len(knowledge_base.examples),
+        "Loaded %d practice sections", len(knowledge_base.practices)
     )
 
     resolved_tests_path = _resolve_tests_path(tests_path, resolved_path)
@@ -223,42 +216,12 @@ def register_knowledge_tools(
         return result
 
     @mcp.tool()
-    def get_code_example(operation: str) -> str:
-        """Get clean, minimal code examples for an openreview-py operation.
-
-        Returns working Python code snippets with realistic placeholders.
-
-        Args:
-            operation: What you want to do (e.g., "submit paper", "post edge", "recruit reviewers", "journal decision")
-        """
-        result = search_examples(operation, knowledge_base)
-        if not result:
-            return f"No code examples found for: {operation}"
-        return result
-
-    @mcp.tool()
-    def get_workflow_guide(workflow_type: str) -> str:
-        """Get a step-by-step workflow guide with code examples.
-
-        Returns ordered stages for conference or journal workflows,
-        or details for a specific stage.
-
-        Args:
-            workflow_type: "conference", "journal", or a stage name like "matching", "review", "decision", "submission", "recruitment"
-        """
-        result = get_workflow(workflow_type, knowledge_base)
-        if not result:
-            return f"No workflow guide found for: {workflow_type}"
-        return result
-
-    @mcp.tool()
     def search_test_examples(query: str, max_results: int = 5) -> str:
         """Find real usage examples from the openreview-py test suite.
 
         Returns matching test functions showing how API methods, invitations,
         and full workflow stages are actually called in practice. Tests are the
-        canonical, always-current record of intended library usage — use this
-        when `get_code_example` doesn't cover what you need.
+        canonical, always-current record of intended library usage.
 
         Requires the openreview-py tests directory to be available. Set
         OPENREVIEW_TESTS_PATH, or point OPENREVIEW_KNOWLEDGE_PATH at a clone
@@ -283,7 +246,5 @@ def register_knowledge_tools(
         "search_api": search_api,
         "get_method_signature": get_method_signature,
         "get_best_practices": get_best_practices,
-        "get_code_example": get_code_example,
-        "get_workflow_guide": get_workflow_guide,
         "search_test_examples": search_test_examples,
     }

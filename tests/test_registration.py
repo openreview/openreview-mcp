@@ -12,8 +12,6 @@ EXPECTED_TOOLS = {
     "search_api",
     "get_method_signature",
     "get_best_practices",
-    "get_code_example",
-    "get_workflow_guide",
     "search_test_examples",
 }
 
@@ -76,7 +74,6 @@ class TestSearchTestExamplesTool:
         monkeypatch.delenv("OPENREVIEW_TESTS_PATH", raising=False)
         # Point knowledge at a temp dir with no tests/ subdir.
         (tmp_path / "llm.txt").write_text("# stub\n")
-        (tmp_path / "examples.md").write_text("# stub\n")
         mcp = FastMCP("test")
         handles = register_knowledge_tools(mcp, knowledge_path=str(tmp_path))
         out = handles["search_test_examples"](query="post_decisions")
@@ -102,9 +99,8 @@ class TestSearchTestExamplesTool:
     ):
         """If knowledge_path contains a tests/ subdir, the index auto-discovers it."""
         monkeypatch.delenv("OPENREVIEW_TESTS_PATH", raising=False)
-        # Set up knowledge_path with llm.txt + examples.md + tests/ → fake_tests content
+        # Set up knowledge_path with llm.txt + tests/ → fake_tests content
         (tmp_path / "llm.txt").write_text("# stub\n")
-        (tmp_path / "examples.md").write_text("# stub\n")
         tests_dir = tmp_path / "tests"
         tests_dir.mkdir()
         # Copy one fake test file in so the auto-detected index isn't empty.

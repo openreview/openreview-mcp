@@ -8,9 +8,7 @@ MCP server that helps LLMs write correct `openreview-py` code. Two knowledge lay
 |------|---------|
 | `search_api` | Search OpenReview API methods by topic (results tagged `[v1]`/`[v2]`) |
 | `get_method_signature` | Get detailed method signatures and docstrings |
-| `get_best_practices` | Find best practices and patterns |
-| `get_code_example` | Retrieve curated code examples for common operations |
-| `get_workflow_guide` | Get step-by-step workflow guides |
+| `get_best_practices` | Concepts, conventions, and anti-patterns from `llm.txt` |
 | `search_test_examples` | Real call sites from the upstream `openreview-py/tests/` directory (auto-indexed) |
 
 ## Usage
@@ -44,7 +42,7 @@ Add to `.mcp.json` (project-level) **or** to `~/.claude.json` under the relevant
 }
 ```
 
-Restart Claude Code (`/exit` and relaunch). All 6 tools become available; `search_test_examples` will index your live `openreview-py/tests/` directory at container start.
+Restart Claude Code (`/exit` and relaunch). All 4 tools become available; `search_test_examples` will index your live `openreview-py/tests/` directory at container start.
 
 **To upgrade later:**
 
@@ -81,7 +79,7 @@ If you'd rather Claude Code spawn a fresh container on every tool call (lower id
 
 ### Without an openreview-py checkout
 
-If you don't have `openreview-py` cloned locally, drop the `-v` and `-e` flags. The bundled `llm.txt`/`examples.md` and the openreview-py git dependency installed inside the image still power `search_api`, `get_method_signature`, `get_best_practices`, `get_code_example`, and `get_workflow_guide`. `search_test_examples` will return a disabled message until you mount a `tests/` directory.
+If you don't have `openreview-py` cloned locally, drop the `-v` and `-e` flags. The bundled `llm.txt` and the openreview-py git dependency installed inside the image still power `search_api`, `get_method_signature`, and `get_best_practices`. `search_test_examples` will return a disabled message until you mount a `tests/` directory.
 
 ### Remote server (public, optional)
 
@@ -110,7 +108,7 @@ openreview-mcp [--transport stdio|sse|streamable-http] [--port 8080] [--host 0.0
 
 | Var | Purpose |
 |-----|---------|
-| `OPENREVIEW_KNOWLEDGE_PATH` | Path to a directory containing `llm.txt` + `examples.md`. If it also contains a `tests/` subdir (as the `openreview-py` repo does), the test-suite index auto-enables. Defaults to the bundled `knowledge_files/`. |
+| `OPENREVIEW_KNOWLEDGE_PATH` | Path to a directory containing `llm.txt`. If it also contains a `tests/` subdir (as the `openreview-py` repo does), the test-suite index auto-enables. Defaults to the bundled `knowledge_files/`. |
 | `OPENREVIEW_TESTS_PATH` | Explicit override for the `tests/` directory used by `search_test_examples`. Falls back to `{OPENREVIEW_KNOWLEDGE_PATH}/tests/`. |
 
 ## Reusable Registration
@@ -128,7 +126,7 @@ register_knowledge_tools(mcp)  # mounts 5 knowledge tools onto your FastMCP inst
 The server has three layers, each with a different freshness story:
 
 - **Introspection** (`search_api`, `get_method_signature`) — reads the installed `openreview-py` at startup. Refreshes when you rebuild the image (`--no-cache` forces pip to refetch) or when you mount a live checkout via `OPENREVIEW_KNOWLEDGE_PATH` (introspects from inside the container's editable install path).
-- **Static knowledge** (`get_best_practices`, `get_code_example`, `get_workflow_guide`) — reads `llm.txt` / `examples.md`. Bundled inside the image; mount your `openreview-py` checkout to track upstream edits without rebuilding.
+- **Static knowledge** (`get_best_practices`) — reads `llm.txt` (concepts, conventions, anti-patterns; the rules tests assert but never explain). Bundled inside the image; mount your `openreview-py` checkout to track upstream edits without rebuilding.
 - **Test-suite index** (`search_test_examples`) — AST-indexed at startup from the `tests/` subdir of whatever `OPENREVIEW_KNOWLEDGE_PATH` (or `OPENREVIEW_TESTS_PATH`) points at. Always reflects the working tree of the mounted checkout — `git pull` in your `openreview-py` checkout and restart the container.
 
 ## Development
