@@ -24,6 +24,21 @@ TARGET_MODULES = [
     ("openreview.tools", "tools"),
 ]
 
+# API version each source module belongs to. Used to disambiguate side-by-side
+# v1/v2 results where the same method name exists on both clients with different
+# parameter sets (e.g. get_invitations: v1 uses regex=, v2 uses prefix=).
+_API_VERSION_BY_MODULE = {
+    "openreview.api.client": "v2",
+    "openreview.venue": "v2",
+    "openreview.journal": "v2",
+    "openreview.openreview": "v1",
+}
+
+
+def _api_version_for_module(module_path: str) -> str | None:
+    """Return 'v1' / 'v2' for known modules, or None for shared/uncategorized."""
+    return _API_VERSION_BY_MODULE.get(module_path)
+
 
 def _extract_params(sig: inspect.Signature) -> list[dict[str, Any]]:
     """Extract parameter info from a signature."""
@@ -74,6 +89,7 @@ def introspect_library() -> dict[str, dict[str, dict[str, Any]]]:
                 "name": name,
                 "class_name": class_name,
                 "module": module_path,
+                "api_version": _api_version_for_module(module_path),
                 "signature": str(sig) if sig else "()",
                 "params": _extract_params(sig) if sig else [],
                 "docstring": docstring,
@@ -106,6 +122,7 @@ def introspect_library() -> dict[str, dict[str, dict[str, Any]]]:
                 "name": name,
                 "class_name": label,
                 "module": module_path,
+                "api_version": _api_version_for_module(module_path),
                 "signature": str(sig) if sig else "()",
                 "params": _extract_params(sig) if sig else [],
                 "docstring": docstring,

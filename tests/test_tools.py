@@ -32,6 +32,21 @@ def test_get_method_signature_returns_details(tools):
     assert "await_process" in text
 
 
+def test_search_api_labels_api_version(tools):
+    # get_invitations exists on both clients with different parameter sets;
+    # the search output must distinguish them so callers don't copy v1 kwargs
+    # onto a v2 call (or vice versa).
+    text = tools["search_api"](query="get_invitations")
+    assert "[v2] OpenReviewClient.get_invitations" in text
+    assert "[v1] Client.get_invitations" in text
+
+
+def test_get_method_signature_labels_api_version(tools):
+    text = tools["get_method_signature"](method_name="get_invitations")
+    assert "**API:** v2" in text
+    assert "**API:** v1" in text
+
+
 def test_get_best_practices_returns_section(tools):
     text = tools["get_best_practices"](topic="authentication")
     assert "token" in text.lower()

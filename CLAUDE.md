@@ -10,6 +10,7 @@ openreview-mcp/
 │   ├── server.py               # Thin FastMCP standalone entry point
 │   ├── introspection.py        # Live introspection via inspect module
 │   ├── knowledge.py            # Static knowledge parser (llm.txt + examples.md)
+│   ├── tests_index.py          # AST-postings index over upstream openreview-py tests
 │   └── knowledge_files/
 │       ├── llm.txt             # Bundled best-practices source
 │       └── examples.md         # Bundled code-examples source
@@ -17,10 +18,12 @@ openreview-mcp/
 │   ├── conftest.py             # Shared fixtures
 │   ├── test_introspection.py   # Layer 1: introspection unit tests
 │   ├── test_knowledge.py       # Layer 2: knowledge parsing unit tests
+│   ├── test_tests_index.py     # Layer 3: tests-index unit tests (hermetic fixtures)
 │   ├── test_bundled_knowledge.py  # Release-time bundling regression guard
 │   ├── test_registration.py    # Tests for register_knowledge_tools
-│   ├── test_tools.py           # Layer 3: tool behavior via FastMCP fixture
-│   └── fixtures/               # Minimal test fixture files
+│   ├── test_tools.py           # Tool behavior via FastMCP fixture
+│   └── fixtures/
+│       └── fake_tests/         # Synthetic test files for the tests-index fixture
 ├── docs/
 │   ├── DEPLOYMENT.md
 │   └── superpowers/            # Specs and plans
@@ -30,20 +33,22 @@ openreview-mcp/
 └── README.md
 ```
 
-Key files: `openreview_mcp/registration.py` (the reusable `register_knowledge_tools` function that defines the 5 tools as closures), `openreview_mcp/server.py` (thin standalone entry point), `openreview_mcp/introspection.py` (live introspection), `openreview_mcp/knowledge.py` (static knowledge parser).
+Key files: `openreview_mcp/registration.py` (the reusable `register_knowledge_tools` function that defines the tools as closures), `openreview_mcp/server.py` (thin standalone entry point), `openreview_mcp/introspection.py` (live introspection), `openreview_mcp/knowledge.py` (static knowledge parser), `openreview_mcp/tests_index.py` (AST-postings index over upstream openreview-py tests, lazy body read via linecache).
 
 Public API:
 - `from openreview_mcp import register_knowledge_tools` — mounts the 5 knowledge tools onto any FastMCP instance. Zero import side effects (introspection and knowledge loading happen at call time, not import). Returns a `dict[str, Callable[..., str]]` of tool handles keyed by name. Downstream consumers can import and use this to combine the knowledge tools with their own MCP tools on a single server.
 
 Environment Variables:
-- `OPENREVIEW_KNOWLEDGE_PATH` (optional): path to a directory containing `llm.txt` and `examples.md`. Defaults to the bundled `openreview_mcp/knowledge_files/` directory. Set this to override with a live openreview-py checkout during development.
+- `OPENREVIEW_KNOWLEDGE_PATH` (optional): path to a directory containing `llm.txt` and `examples.md`. Defaults to the bundled `openreview_mcp/knowledge_files/` directory. Set this to override with a live openreview-py checkout during development. If this path also contains a `tests/` subdir (as the openreview-py repo does), the test-suite index auto-enables.
+- `OPENREVIEW_TESTS_PATH` (optional): explicit path to an `openreview-py/tests/` directory for the `search_test_examples` tool. If unset, falls back to `{OPENREVIEW_KNOWLEDGE_PATH}/tests/` when it exists. If still unresolved, `search_test_examples` returns a clear disabled message and the other tools work unaffected.
 
-Tools (5 total):
+Tools (6 total):
 1. `search_api(query, class_name?)` — Search methods/classes by keyword with relevance ranking
 2. `get_method_signature(method_name)` — Full details for a specific method
 3. `get_best_practices(topic)` — Best practices from llm.txt by topic
 4. `get_code_example(operation)` — Code examples from examples.md
 5. `get_workflow_guide(workflow_type)` — Step-by-step workflow guides with code
+6. `search_test_examples(query, max_results=5)` — Real call sites from the upstream openreview-py test suite (auto-current; AST-indexed at registration time)
 
 Code Style & Conventions:
 - snake_case for files and functions, PascalCase for classes

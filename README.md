@@ -6,71 +6,92 @@ MCP server that helps LLMs write correct `openreview-py` code. Two knowledge lay
 
 | Tool | Purpose |
 |------|---------|
-| `search_api` | Search OpenReview API methods by topic |
+| `search_api` | Search OpenReview API methods by topic (results tagged `[v1]`/`[v2]`) |
 | `get_method_signature` | Get detailed method signatures and docstrings |
 | `get_best_practices` | Find best practices and patterns |
-| `get_code_example` | Retrieve code examples for common operations |
+| `get_code_example` | Retrieve curated code examples for common operations |
 | `get_workflow_guide` | Get step-by-step workflow guides |
+| `search_test_examples` | Real call sites from the upstream `openreview-py/tests/` directory (auto-indexed) |
 
 ## Usage
 
-### Option 1: Local Docker (stdio)
+### Quick start (recommended)
 
-Build and use directly with Claude Code:
+Clone, build, and run as a long-running local HTTP service. This is the path teammates should use — it survives Claude Code restarts and the `openreview-py` mount lights up live introspection **and** the test-suite index (`search_test_examples`).
 
 ```bash
+git clone https://github.com/openreview/openreview-mcp.git
+cd openreview-mcp
 docker build -t openreview-mcp .
+
+# Adjust the path to your local openreview-py checkout
+docker run -d --name openreview-mcp -p 8080:8080 \
+  -v /path/to/openreview-py:/knowledge \
+  -e OPENREVIEW_KNOWLEDGE_PATH=/knowledge \
+  openreview-mcp --transport streamable-http
 ```
 
-Add to `.mcp.json`:
+Add to `.mcp.json` (project-level) **or** to `~/.claude.json` under the relevant project's `mcpServers`:
+
+```json
+{
+  "mcpServers": {
+    "openreview": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp"
+    }
+  }
+}
+```
+
+Restart Claude Code (`/exit` and relaunch). All 6 tools become available; `search_test_examples` will index your live `openreview-py/tests/` directory at container start.
+
+**To upgrade later:**
+
+```bash
+git pull && docker build --no-cache -t openreview-mcp .
+docker stop openreview-mcp && docker rm openreview-mcp
+docker run -d --name openreview-mcp -p 8080:8080 \
+  -v /path/to/openreview-py:/knowledge \
+  -e OPENREVIEW_KNOWLEDGE_PATH=/knowledge \
+  openreview-mcp --transport streamable-http
+```
+
+`--no-cache` ensures pip refetches the latest `openreview-py` from GitHub instead of using a cached layer.
+
+### Alternative: stdio per-call (no long-running service)
+
+If you'd rather Claude Code spawn a fresh container on every tool call (lower idle footprint, but introspection + index rebuild on each invocation):
 
 ```json
 {
   "mcpServers": {
     "openreview": {
       "command": "docker",
-      "args": ["run", "--rm", "-i", "openreview-mcp"]
+      "args": [
+        "run", "--rm", "-i",
+        "-v", "/path/to/openreview-py:/knowledge",
+        "-e", "OPENREVIEW_KNOWLEDGE_PATH=/knowledge",
+        "openreview-mcp"
+      ]
     }
   }
 }
 ```
 
-Restart Claude Code (`/exit` and relaunch). The 5 tools will be available immediately.
+### Without an openreview-py checkout
 
-### Option 2: Local Docker service (SSE)
+If you don't have `openreview-py` cloned locally, drop the `-v` and `-e` flags. The bundled `llm.txt`/`examples.md` and the openreview-py git dependency installed inside the image still power `search_api`, `get_method_signature`, `get_best_practices`, `get_code_example`, and `get_workflow_guide`. `search_test_examples` will return a disabled message until you mount a `tests/` directory.
 
-Run as a persistent local service:
+### Remote server (public, optional)
 
-```bash
-docker run -d --name openreview-mcp -p 8080:8080 openreview-mcp --transport sse
-```
-
-Add to `.mcp.json`:
+Deploy the same image to any host that can run Docker (Cloud Run, Fly.io, a VM, etc.) and point clients at its public URL:
 
 ```json
 {
   "mcpServers": {
     "openreview": {
-      "url": "http://localhost:8080/sse"
-    }
-  }
-}
-```
-
-### Option 3: Remote server (public)
-
-Deploy to any host that can run Docker (Cloud Run, Fly.io, a VM, etc.):
-
-```bash
-docker run -d -p 8080:8080 openreview-mcp --transport streamable-http
-```
-
-Clients connect via `.mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "openreview": {
+      "type": "http",
       "url": "https://your-server.example.com/mcp"
     }
   }
@@ -85,7 +106,12 @@ No API token is needed — this server provides knowledge tools only (read-only,
 openreview-mcp [--transport stdio|sse|streamable-http] [--port 8080] [--host 0.0.0.0]
 ```
 
-Knowledge files (`llm.txt`, `examples.md`) are bundled inside the image — no bind-mount required. To override with a live openreview-py checkout, add `-e OPENREVIEW_KNOWLEDGE_PATH=/knowledge -v /path/to/openreview-py:/knowledge` to the `docker run` args.
+### Environment variables
+
+| Var | Purpose |
+|-----|---------|
+| `OPENREVIEW_KNOWLEDGE_PATH` | Path to a directory containing `llm.txt` + `examples.md`. If it also contains a `tests/` subdir (as the `openreview-py` repo does), the test-suite index auto-enables. Defaults to the bundled `knowledge_files/`. |
+| `OPENREVIEW_TESTS_PATH` | Explicit override for the `tests/` directory used by `search_test_examples`. Falls back to `{OPENREVIEW_KNOWLEDGE_PATH}/tests/`. |
 
 ## Reusable Registration
 
@@ -99,26 +125,11 @@ register_knowledge_tools(mcp)  # mounts 5 knowledge tools onto your FastMCP inst
 
 ## Keeping Up with openreview-py
 
-The introspection layer (`search_api`, `get_method_signature`) reads directly from the installed `openreview-py` library at startup. When `openreview-py` adds or changes methods, rebuild the Docker image to pick them up:
+The server has three layers, each with a different freshness story:
 
-```bash
-docker build --no-cache -t openreview-mcp .
-```
-
-The `--no-cache` flag ensures pip fetches the latest `openreview-py` from GitHub instead of using a cached layer.
-
-For the static knowledge layer (`get_best_practices`, `get_code_example`, `get_workflow_guide`), update the bundled files in `openreview_mcp/knowledge_files/` and rebuild.
-
-Alternatively, to use a live checkout of `openreview-py` without rebuilding, mount it at runtime:
-
-```bash
-docker run --rm -i \
-  -e OPENREVIEW_KNOWLEDGE_PATH=/knowledge \
-  -v /path/to/openreview-py:/knowledge \
-  openreview-mcp
-```
-
-This overrides both the introspected library and the knowledge files path.
+- **Introspection** (`search_api`, `get_method_signature`) — reads the installed `openreview-py` at startup. Refreshes when you rebuild the image (`--no-cache` forces pip to refetch) or when you mount a live checkout via `OPENREVIEW_KNOWLEDGE_PATH` (introspects from inside the container's editable install path).
+- **Static knowledge** (`get_best_practices`, `get_code_example`, `get_workflow_guide`) — reads `llm.txt` / `examples.md`. Bundled inside the image; mount your `openreview-py` checkout to track upstream edits without rebuilding.
+- **Test-suite index** (`search_test_examples`) — AST-indexed at startup from the `tests/` subdir of whatever `OPENREVIEW_KNOWLEDGE_PATH` (or `OPENREVIEW_TESTS_PATH`) points at. Always reflects the working tree of the mounted checkout — `git pull` in your `openreview-py` checkout and restart the container.
 
 ## Development
 

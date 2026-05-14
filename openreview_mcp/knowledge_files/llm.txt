@@ -14,6 +14,15 @@
 - The clients share model classes but differ in method signatures.
 - Using a v1 URL with the v2 client (or vice versa) raises OpenReviewException with guidance.
 
+### v1 vs v2 parameter differences
+
+Same method name, different parameters between clients — do NOT copy a v1 keyword onto a v2 call.
+
+- `get_invitations`: v2 uses `prefix=` (prefix match on invitation ID). v1 uses `regex=` (regex match). `regex=` does not exist on `OpenReviewClient.get_invitations` and passing it will raise `TypeError`.
+- `get_notes` / `get_all_notes`: v2 adds `parent_invitations`, `transitive_members`, `domain`, `select`; v1 has `original` and `tauthor` (not present in v2).
+
+When unsure, look at the introspected signature for the *exact* client you're using. The MCP `search_api` / `get_method_signature` results tag each entry with `[v1]` or `[v2]`, and the `**Module:**` field tells you which API the method came from (`openreview.api.client` = v2, `openreview.openreview` = v1).
+
 ## Authentication
 
 - Username/password: `OpenReviewClient(username='...', password='...')`
@@ -163,7 +172,7 @@ Groups:
 
 Invitations:
 - `get_invitation(id)` — single invitation
-- `get_invitations(replyForum=..., prefix=...)` — filter invitations
+- `get_invitations(replyForum=..., prefix=...)` — filter invitations (v2). In v1 use `regex=...` instead — `prefix=` does not exist on the v1 client and `regex=` does not exist on the v2 client.
 
 Edges:
 - `get_edges(invitation=..., head=..., tail=..., label=...)` — filter edges

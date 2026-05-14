@@ -50,6 +50,14 @@ class TestIntrospectLibrary:
                 f"Private method included: {method_name}"
             )
 
+    def test_tags_api_version(self, cache):
+        # v2 client methods are tagged v2
+        assert cache["OpenReviewClient"]["get_invitations"]["api_version"] == "v2"
+        # v1 client methods are tagged v1
+        assert cache["Client"]["get_invitations"]["api_version"] == "v1"
+        # Shared/uncategorized modules (tools) stay untagged
+        assert cache["tools"]["iterget_notes"]["api_version"] is None
+
 
 class TestSearchMethods:
     def test_exact_name_match(self, cache):
