@@ -10,5 +10,5 @@ def fixtures_dir():
 
 
 @pytest.fixture
-def llm_txt_path():
-    return os.path.join(FIXTURES_DIR, "llm.txt")
+def best_practices_path():
+    return os.path.join(FIXTURES_DIR, "best_practices.md")

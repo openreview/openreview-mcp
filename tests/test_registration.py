@@ -63,7 +63,7 @@ class TestRegisterKnowledgeTools:
         mcp = FastMCP("test")
         handles = register_knowledge_tools(mcp, knowledge_path=fixtures_dir)
 
-        # The fixture llm.txt has an "Authentication" section mentioning "Token auth"
+        # The fixture best_practices.md has an "Authentication" section mentioning "Token auth"
         result = handles["get_best_practices"](topic="Authentication")
         assert "Token auth" in result
 
@@ -72,8 +72,8 @@ class TestSearchTestExamplesTool:
     def test_disabled_message_when_no_tests_path(self, tmp_path, monkeypatch):
         """With no env var and a knowledge_path that has no tests/ subdir, the tool returns the disabled string."""
         monkeypatch.delenv("OPENREVIEW_TESTS_PATH", raising=False)
-        # Point knowledge at a temp dir with no tests/ subdir.
-        (tmp_path / "llm.txt").write_text("# stub\n")
+        # Point knowledge at a temp dir with no tests/ subdir. The bundled
+        # best_practices.md is used as a graceful fallback.
         mcp = FastMCP("test")
         handles = register_knowledge_tools(mcp, knowledge_path=str(tmp_path))
         out = handles["search_test_examples"](query="post_decisions")
@@ -99,8 +99,8 @@ class TestSearchTestExamplesTool:
     ):
         """If knowledge_path contains a tests/ subdir, the index auto-discovers it."""
         monkeypatch.delenv("OPENREVIEW_TESTS_PATH", raising=False)
-        # Set up knowledge_path with llm.txt + tests/ → fake_tests content
-        (tmp_path / "llm.txt").write_text("# stub\n")
+        # Set up knowledge_path with only a tests/ subdir — best_practices.md
+        # falls back to the bundled copy.
         tests_dir = tmp_path / "tests"
         tests_dir.mkdir()
         # Copy one fake test file in so the auto-detected index isn't empty.
@@ -112,3 +112,20 @@ class TestSearchTestExamplesTool:
         handles = register_knowledge_tools(mcp, knowledge_path=str(tmp_path))
         out = handles["search_test_examples"](query="post_decisions")
         assert "test_post_decisions" in out
+
+
+class TestBestPracticesFallback:
+    def test_falls_back_to_bundled_when_dir_lacks_best_practices(
+        self, tmp_path, monkeypatch
+    ):
+        """A knowledge_path that doesn't contain best_practices.md must not
+        error — the bundled copy is used so callers can point the env var at
+        an `openreview-py` checkout for the tests-index without supplying a
+        best-practices file too.
+        """
+        monkeypatch.delenv("OPENREVIEW_KNOWLEDGE_PATH", raising=False)
+        mcp = FastMCP("test")
+        handles = register_knowledge_tools(mcp, knowledge_path=str(tmp_path))
+        # Bundled best_practices.md has an "Authentication" section.
+        result = handles["get_best_practices"](topic="Authentication")
+        assert "Authentication" in result

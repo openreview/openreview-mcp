@@ -4,7 +4,7 @@ Hermetic fixtures backing the parser and tests-index unit tests.
 
 ## Files
 
-- `llm.txt` — Minimal fixture version of the static knowledge file used by `test_knowledge.py`. Must contain exactly these four `## ` sections (hardcoded in `test_knowledge.py::TestLoadKnowledge::test_parses_llm_txt_sections`):
+- `best_practices.md` — Minimal fixture version of the static knowledge file used by `test_knowledge.py`. Must contain exactly these four `## ` sections (hardcoded in `test_knowledge.py::TestLoadKnowledge::test_parses_llm_txt_sections`):
   - `Authentication` (must mention "Token auth" and "username")
   - `Content Structure`
   - `Conference Workflow`
@@ -13,7 +13,7 @@ Hermetic fixtures backing the parser and tests-index unit tests.
 
 ## Editing rules
 
-These are **test fixtures, not live knowledge**. The real `llm.txt` is bundled inside the package at `openreview_mcp/knowledge_files/` (copied verbatim from the upstream `openreview-py` repo at release time). The `OPENREVIEW_KNOWLEDGE_PATH` env var overrides the bundled default at runtime for development against a live checkout.
+These are **test fixtures, not live knowledge**. The real `best_practices.md` is bundled inside the package at `openreview_mcp/knowledge_files/` and edited directly in this repo (not synced from upstream `openreview-py`). The `OPENREVIEW_KNOWLEDGE_PATH` env var optionally points at a directory containing an override copy.
 
 Before editing either fixture, grep `tests/test_knowledge.py`, `tests/test_tests_index.py`, and `tests/test_tools.py` for the asserted strings — tests will silently drift if you add or remove sections. In particular:
 

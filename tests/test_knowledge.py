@@ -1,4 +1,4 @@
-"""Tests for static knowledge parsing (llm.txt)."""
+"""Tests for static knowledge parsing (best_practices.md)."""
 
 import os
 
@@ -11,8 +11,8 @@ from openreview_mcp.knowledge import (
 
 
 class TestLoadKnowledge:
-    def test_parses_llm_txt_sections(self, llm_txt_path):
-        kb = load_knowledge(llm_txt_path)
+    def test_parses_llm_txt_sections(self, best_practices_path):
+        kb = load_knowledge(best_practices_path)
         # Fixture has 4 sections: Authentication, Content Structure, Conference Workflow, Anti-Patterns
         assert len(kb.practices) == 4
         assert "Authentication" in kb.practices
@@ -22,13 +22,13 @@ class TestLoadKnowledge:
 
     def test_missing_file_raises(self):
         with pytest.raises(FileNotFoundError):
-            load_knowledge("/nonexistent/path/llm.txt")
+            load_knowledge("/nonexistent/path/best_practices.md")
 
 
 @pytest.fixture(scope="module")
 def kb():
     fixtures_dir = os.path.join(os.path.dirname(__file__), "fixtures")
-    return load_knowledge(os.path.join(fixtures_dir, "llm.txt"))
+    return load_knowledge(os.path.join(fixtures_dir, "best_practices.md"))
 
 
 class TestSearchBestPractices:

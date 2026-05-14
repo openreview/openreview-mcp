@@ -35,14 +35,32 @@ _BUNDLED_KNOWLEDGE_DIR = os.path.join(
 )
 
 
-def _resolve_knowledge_path(override: str | None = None) -> str:
-    """Resolve the knowledge directory: explicit arg > env var > bundled default."""
-    if override:
-        return override
-    env = os.environ.get("OPENREVIEW_KNOWLEDGE_PATH")
-    if env:
-        return env
-    return _BUNDLED_KNOWLEDGE_DIR
+_BUNDLED_BEST_PRACTICES_FILE = os.path.join(
+    _BUNDLED_KNOWLEDGE_DIR, "best_practices.md"
+)
+
+
+def _resolve_best_practices_file(override: str | None = None) -> str:
+    """Resolve which best_practices.md to load.
+
+    Priority: explicit `knowledge_path` arg > OPENREVIEW_KNOWLEDGE_PATH env var
+    (each expected to be a directory containing `best_practices.md`) > the
+    bundled file shipped inside the package. If the resolved directory does
+    not contain `best_practices.md`, falls back to the bundled file — this is
+    the common case when callers point OPENREVIEW_KNOWLEDGE_PATH at an
+    `openreview-py` checkout to enable the test-suite index; the
+    best-practices content always comes from this repo.
+    """
+    candidate_dir = override or os.environ.get("OPENREVIEW_KNOWLEDGE_PATH")
+    if candidate_dir:
+        candidate = os.path.join(candidate_dir, "best_practices.md")
+        if os.path.isfile(candidate):
+            return candidate
+        logger.info(
+            "best_practices.md not found at %s; using bundled copy.",
+            candidate,
+        )
+    return _BUNDLED_BEST_PRACTICES_FILE
 
 
 def _resolve_tests_path(
@@ -124,9 +142,12 @@ def register_knowledge_tools(
 
     Args:
         mcp: The FastMCP server to register tools on.
-        knowledge_path: Optional directory containing llm.txt.
+        knowledge_path: Optional directory containing `best_practices.md`.
             Falls back to the OPENREVIEW_KNOWLEDGE_PATH env var, then to the
-            bundled knowledge file inside the package.
+            bundled file inside the package. If the resolved directory does
+            not contain `best_practices.md`, the bundled copy is used — so
+            pointing this at an `openreview-py` checkout (to enable the
+            test-suite index via `{knowledge_path}/tests/`) does not error.
         tests_path: Optional path to an openreview-py `tests/` directory.
             Falls back to OPENREVIEW_TESTS_PATH, then to `{knowledge_path}/tests/`
             when that subdir exists.
@@ -135,7 +156,7 @@ def register_knowledge_tools(
         A dict mapping tool name to the registered tool function, primarily
         for direct test access. Production code can ignore the return value.
     """
-    resolved_path = _resolve_knowledge_path(knowledge_path)
+    best_practices_file = _resolve_best_practices_file(knowledge_path)
 
     logger.info("Introspecting openreview-py library...")
     introspection_cache = introspect_library()
@@ -145,13 +166,19 @@ def register_knowledge_tools(
         sum(len(m) for m in introspection_cache.values()),
     )
 
-    logger.info("Loading knowledge from %s", resolved_path)
-    knowledge_base = load_knowledge(os.path.join(resolved_path, "llm.txt"))
+    logger.info("Loading best practices from %s", best_practices_file)
+    knowledge_base = load_knowledge(best_practices_file)
     logger.info(
         "Loaded %d practice sections", len(knowledge_base.practices)
     )
 
-    resolved_tests_path = _resolve_tests_path(tests_path, resolved_path)
+    # The tests-path auto-detect still uses the original env var / arg as a
+    # directory hint, so callers can mount an openreview-py checkout once
+    # and get the tests index without setting a second env var.
+    knowledge_dir_hint = knowledge_path or os.environ.get(
+        "OPENREVIEW_KNOWLEDGE_PATH"
+    )
+    resolved_tests_path = _resolve_tests_path(tests_path, knowledge_dir_hint)
     test_index = None
     if resolved_tests_path is None:
         logger.info(

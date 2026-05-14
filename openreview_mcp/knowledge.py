@@ -1,4 +1,4 @@
-"""Static knowledge parser for llm.txt."""
+"""Static knowledge parser for best_practices.md."""
 
 import os
 from dataclasses import dataclass, field
@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class KnowledgeBase:
-    """Indexed sections parsed from llm.txt."""
+    """Indexed sections parsed from best_practices.md."""
 
     practices: dict[str, str] = field(default_factory=dict)
 
@@ -35,19 +35,21 @@ def _parse_sections(content: str, level: str = "## ") -> dict[str, str]:
     return sections
 
 
-def load_knowledge(llm_txt_path: str) -> KnowledgeBase:
-    """Parse llm.txt into an indexed KnowledgeBase."""
-    if not os.path.isfile(llm_txt_path):
-        raise FileNotFoundError(f"llm.txt not found at: {llm_txt_path}")
+def load_knowledge(best_practices_path: str) -> KnowledgeBase:
+    """Parse best_practices.md into an indexed KnowledgeBase."""
+    if not os.path.isfile(best_practices_path):
+        raise FileNotFoundError(
+            f"best_practices.md not found at: {best_practices_path}"
+        )
 
-    with open(llm_txt_path) as f:
-        llm_content = f.read()
+    with open(best_practices_path) as f:
+        content = f.read()
 
-    return KnowledgeBase(practices=_parse_sections(llm_content, "## "))
+    return KnowledgeBase(practices=_parse_sections(content, "## "))
 
 
 def search_best_practices(topic: str, kb: KnowledgeBase) -> str:
-    """Search llm.txt sections by topic. Header matches ranked above content matches."""
+    """Search best_practices.md sections by topic. Header matches ranked above content matches."""
     header_matches = []
     content_matches = []
 

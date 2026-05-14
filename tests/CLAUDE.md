@@ -4,14 +4,14 @@ Pytest suite. Mirrors the package layers: introspection, knowledge parsing, regi
 
 ## Files
 
-- `conftest.py` — Shared fixtures: `fixtures_dir`, `llm_txt_path`. Both resolve paths under `tests/fixtures/`.
+- `conftest.py` — Shared fixtures: `fixtures_dir`, `best_practices_path`. Both resolve paths under `tests/fixtures/`.
 - `test_introspection.py` — Unit tests for `openreview_mcp/introspection.py`. **Requires `openreview-py` installed** because it calls `introspect_library()` against the real package. Covers class discovery, method signature capture, docstring capture, private method skipping, API-version tagging, and search ranking (exact > partial > docstring > param).
-- `test_knowledge.py` — Unit tests for `openreview_mcp/knowledge.py`. Uses the fixture `llm.txt` — **does not require** `openreview-py` installed. Covers section parsing, header-ranked-above-content ordering, case insensitivity, and missing-file error handling.
+- `test_knowledge.py` — Unit tests for `openreview_mcp/knowledge.py`. Uses the fixture `best_practices.md` — **does not require** `openreview-py` installed. Covers section parsing, header-ranked-above-content ordering, case insensitivity, and missing-file error handling.
 - `test_tests_index.py` — Unit tests for `openreview_mcp/tests_index.py`. Uses the hermetic `tests/fixtures/fake_tests/` corpus — **does not require** the upstream `openreview-py/tests/` checkout. Covers AST indexing, selenium exclusion, token postings, scoring, body truncation, fixtures preamble, helpers footer, and malformed-AST graceful skip.
-- `test_bundled_knowledge.py` — Release-time regression guard. Asserts `llm.txt` ships inside `openreview_mcp/knowledge_files/` and loads into non-empty practice sections. Catches a missed manual sync from upstream openreview-py at release time.
-- `test_registration.py` — Tests for `register_knowledge_tools` itself. Asserts all 4 tools register on a fresh `FastMCP`, the returned dict has exactly the 4 expected keys, invoking a handle calls into real introspection data, the `knowledge_path` override takes precedence over `OPENREVIEW_KNOWLEDGE_PATH`, and `search_test_examples` resolves a tests directory in the right priority order (explicit arg > env var > `{knowledge_path}/tests/` auto-detect).
+- `test_bundled_knowledge.py` — Regression guard. Asserts `best_practices.md` ships inside `openreview_mcp/knowledge_files/` and loads into non-empty practice sections. Catches an accidental delete or unparseable edit before release.
+- `test_registration.py` — Tests for `register_knowledge_tools` itself. Asserts all 4 tools register on a fresh `FastMCP`, the returned dict has exactly the 4 expected keys, invoking a handle calls into real introspection data, the `knowledge_path` override takes precedence over `OPENREVIEW_KNOWLEDGE_PATH`, `search_test_examples` resolves a tests directory in the right priority order (explicit arg > env var > `{knowledge_path}/tests/` auto-detect), and a `knowledge_path` without a `best_practices.md` gracefully falls back to the bundled copy.
 - `test_tools.py` — Behavior tests for the 4 tools. Uses a module-scoped `tools` fixture that creates a fresh `FastMCP` and calls `register_knowledge_tools(mcp)`, then invokes each tool via `tools["<name>"](kwarg=...)`.
-- `fixtures/` — `llm.txt` for the parser tests and `fake_tests/` for the tests-index tests. See `tests/fixtures/CLAUDE.md`.
+- `fixtures/` — `best_practices.md` for the parser tests and `fake_tests/` for the tests-index tests. See `tests/fixtures/CLAUDE.md`.
 
 ## Running
 
@@ -19,7 +19,7 @@ Pytest suite. Mirrors the package layers: introspection, knowledge parsing, regi
 .venv/bin/python -m pytest tests/ -v
 ```
 
-No environment variables required — tests use the bundled knowledge files inside the package. Set `OPENREVIEW_KNOWLEDGE_PATH=/path/to/openreview-py` only if you want to verify against a live upstream checkout.
+No environment variables required — tests use the bundled `best_practices.md` and the hermetic fixtures in `tests/fixtures/`.
 
 ## Gotchas
 

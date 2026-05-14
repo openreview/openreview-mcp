@@ -1,5 +1,5 @@
 Project Overview & Context:
-This project is an MCP server built with FastMCP that helps LLMs write correct openreview-py code. It provides three knowledge layers: live introspection of the installed openreview-py library (method signatures, docstrings, class structures); a static `llm.txt` of concepts, conventions, and anti-patterns; and an AST-postings index over the upstream `openreview-py/tests/` directory for real call sites. The server exposes 4 tools. Built with Python 3.11+.
+This project is an MCP server built with FastMCP that helps LLMs write correct openreview-py code. It provides three knowledge layers: live introspection of the installed openreview-py library (method signatures, docstrings, class structures); a curated `best_practices.md` of concepts, conventions, and anti-patterns (maintained in this repo, not synced from upstream); and an AST-postings index over the upstream `openreview-py/tests/` directory for real call sites. The server exposes 4 tools. Built with Python 3.11+.
 
 Project Structure:
 ```
@@ -9,10 +9,10 @@ openreview-mcp/
 │   ├── registration.py         # Reusable register_knowledge_tools(mcp) — zero import side effects
 │   ├── server.py               # Thin FastMCP standalone entry point
 │   ├── introspection.py        # Live introspection via inspect module
-│   ├── knowledge.py            # Static knowledge parser (llm.txt)
+│   ├── knowledge.py            # Static knowledge parser (best_practices.md)
 │   ├── tests_index.py          # AST-postings index over upstream openreview-py tests
 │   └── knowledge_files/
-│       └── llm.txt             # Bundled best-practices source
+│       └── best_practices.md   # Curated concepts/conventions/anti-patterns (edited in this repo)
 ├── tests/
 │   ├── conftest.py             # Shared fixtures
 │   ├── test_introspection.py   # Layer 1: introspection unit tests
@@ -35,13 +35,13 @@ Public API:
 - `from openreview_mcp import register_knowledge_tools` — mounts the 5 knowledge tools onto any FastMCP instance. Zero import side effects (introspection and knowledge loading happen at call time, not import). Returns a `dict[str, Callable[..., str]]` of tool handles keyed by name. Downstream consumers can import and use this to combine the knowledge tools with their own MCP tools on a single server.
 
 Environment Variables:
-- `OPENREVIEW_KNOWLEDGE_PATH` (optional): path to a directory containing `llm.txt`. Defaults to the bundled `openreview_mcp/knowledge_files/` directory. Set this to override with a live openreview-py checkout during development. If this path also contains a `tests/` subdir (as the openreview-py repo does), the test-suite index auto-enables.
+- `OPENREVIEW_KNOWLEDGE_PATH` (optional): directory hint. If it contains a `best_practices.md`, that file is loaded instead of the bundled one (otherwise the bundled copy is used — no error). If it also contains a `tests/` subdir (as the openreview-py repo does), the test-suite index auto-enables. The bundled `best_practices.md` is the source of truth — it is edited in this repo and not synced from upstream.
 - `OPENREVIEW_TESTS_PATH` (optional): explicit path to an `openreview-py/tests/` directory for the `search_test_examples` tool. If unset, falls back to `{OPENREVIEW_KNOWLEDGE_PATH}/tests/` when it exists. If still unresolved, `search_test_examples` returns a clear disabled message and the other tools work unaffected.
 
 Tools (4 total):
 1. `search_api(query, class_name?)` — Search methods/classes by keyword with relevance ranking; results tagged `[v1]` / `[v2]`
 2. `get_method_signature(method_name)` — Full details for a specific method (includes `**API:**` v1/v2 marker)
-3. `get_best_practices(topic)` — Concepts, conventions, and anti-patterns from llm.txt
+3. `get_best_practices(topic)` — Concepts, conventions, and anti-patterns from `best_practices.md` (curated in this repo)
 4. `search_test_examples(query, max_results=5)` — Real call sites from the upstream openreview-py test suite (auto-current; AST-indexed at registration time)
 
 Code Style & Conventions:
@@ -56,7 +56,7 @@ Running Tests:
 .venv/bin/python -m pytest tests/ -v
 ```
 
-No environment variables required — tests use the bundled knowledge files. Set `OPENREVIEW_KNOWLEDGE_PATH=/path/to/openreview-py` only if you want to verify against a live upstream checkout.
+No environment variables required — tests use the bundled `best_practices.md` and the hermetic fixtures in `tests/fixtures/`.
 
 ---
 
@@ -142,7 +142,7 @@ If not using conda (plain pip install), the simpler form works:
 }
 ```
 
-The `llm.txt` knowledge file is bundled inside the package, so no `env` block is required for a basic setup. If the user wants to point at a live `openreview-py` checkout for development (so edits to upstream `llm.txt` are picked up without re-syncing, and `search_test_examples` indexes the live `tests/` dir), add an `env` block:
+The `best_practices.md` knowledge file is bundled inside the package, so no `env` block is required for a basic setup. To enable `search_test_examples` against a local `openreview-py` checkout (and pick up local edits to `best_practices.md` without rebuilding the image), add an `env` block:
 ```json
 "env": {
   "OPENREVIEW_KNOWLEDGE_PATH": "/path/to/openreview-py"
