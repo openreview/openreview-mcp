@@ -23,9 +23,6 @@ openreview-mcp/
 │   ├── test_tools.py           # Tool behavior via FastMCP fixture
 │   └── fixtures/
 │       └── fake_tests/         # Synthetic test files for the tests-index fixture
-├── docs/
-│   ├── DEPLOYMENT.md
-│   └── superpowers/            # Specs and plans
 ├── Dockerfile
 ├── pyproject.toml
 ├── CLAUDE.md
