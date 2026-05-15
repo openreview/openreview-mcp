@@ -45,6 +45,12 @@ Add to `.mcp.json` (project-level) **or** to `~/.claude.json` under the relevant
 
 Restart Claude Code (`/exit` and relaunch). All 4 tools become available; `search_test_examples` indexes the bind-mounted `openreview-py/tests/` directory at container start.
 
+**To stop the server:**
+
+```bash
+docker stop openreview-mcp && docker rm openreview-mcp
+```
+
 **To upgrade later** (picks up new `openreview-mcp` code and new upstream `openreview-py` for the introspection layer):
 
 ```bash
