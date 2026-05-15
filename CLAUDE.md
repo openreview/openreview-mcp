@@ -35,7 +35,7 @@ Public API:
 - `from openreview_mcp import register_knowledge_tools` — mounts the 5 knowledge tools onto any FastMCP instance. Zero import side effects (introspection and knowledge loading happen at call time, not import). Returns a `dict[str, Callable[..., str]]` of tool handles keyed by name. Downstream consumers can import and use this to combine the knowledge tools with their own MCP tools on a single server.
 
 Environment Variables:
-- `OPENREVIEW_KNOWLEDGE_PATH` (optional): directory hint. **The Docker image sets this to `/openreview-py` by default**, pointing at the baked-in shallow clone of upstream `openreview-py`, so `search_test_examples` works out of the box. If the resolved directory contains a `best_practices.md`, that file is loaded instead of the bundled one (otherwise the bundled copy is used — no error). If it also contains a `tests/` subdir, the test-suite index uses it. The bundled `best_practices.md` is the source of truth — it is edited in this repo and not synced from upstream.
+- `OPENREVIEW_KNOWLEDGE_PATH` (optional): directory hint. **The Docker image sets this to `/openreview-py` by default**, expecting either a runtime bind-mount of a local `openreview-py` checkout there, or — if you built with `--build-arg CLONE_OPENREVIEW_PY=true` — a baked-in shallow clone at the same path. If the resolved directory contains a `best_practices.md`, that file is loaded instead of the bundled one (otherwise the bundled copy is used — no error). If it also contains a `tests/` subdir, the test-suite index uses it; otherwise `search_test_examples` returns a clear disabled message and the other three tools work unaffected. The bundled `best_practices.md` is the source of truth — it is edited in this repo and not synced from upstream.
 - `OPENREVIEW_TESTS_PATH` (optional): explicit path to an `openreview-py/tests/` directory for the `search_test_examples` tool. If unset, falls back to `{OPENREVIEW_KNOWLEDGE_PATH}/tests/` when it exists. If still unresolved, `search_test_examples` returns a clear disabled message and the other tools work unaffected.
 
 Tools (4 total):
@@ -142,12 +142,16 @@ If not using conda (plain pip install), the simpler form works:
 }
 ```
 
-The `best_practices.md` knowledge file is bundled inside the package, and the Docker image bakes in a shallow clone of `openreview-py` at `/openreview-py` (with `OPENREVIEW_KNOWLEDGE_PATH` pre-set to that path), so no `env` block is required for a basic setup — all 4 tools work out of the box. To pick up live edits to a local `openreview-py` checkout instead of the baked-in clone, bind-mount it at `/openreview-py` (Docker) or override `OPENREVIEW_KNOWLEDGE_PATH` (non-Docker / pip-install path):
+The `best_practices.md` knowledge file is bundled inside the package, and the Docker image pre-sets `OPENREVIEW_KNOWLEDGE_PATH=/openreview-py`. By default no upstream clone is baked into the image — the canonical workflow is to bind-mount a local `openreview-py` checkout at `/openreview-py` so `search_test_examples` reads the working tree directly. Without the bind-mount the tests-index tool returns a "disabled" message and the other three tools work fine.
+
+For non-Docker installs (e.g., a pip-installed CLI), point `OPENREVIEW_KNOWLEDGE_PATH` at your local `openreview-py` checkout via an `env` block:
 ```json
 "env": {
   "OPENREVIEW_KNOWLEDGE_PATH": "/path/to/openreview-py"
 }
 ```
+
+For self-contained images (Cloud Run / VM / teammates without a local clone), opt in to baking an upstream clone with `docker build --build-arg CLONE_OPENREVIEW_PY=true -t openreview-mcp:full .`.
 
 Note: `.mcp.json` is gitignored (contains machine-specific absolute paths). Each developer creates their own.
 

@@ -15,16 +15,20 @@ MCP server that helps LLMs write correct `openreview-py` code. Two knowledge lay
 
 ### Quick start (recommended)
 
-Clone, build, and run as a long-running local HTTP service. The image bakes in a shallow clone of `openreview-py` so all 4 tools — including `search_test_examples` — work out of the box; no host bind-mount required.
+Clone, build, and run as a long-running local HTTP service. The default image is lean — `search_test_examples` reads the upstream `openreview-py/tests/` directory from a bind-mount, so point `-v` at your local checkout (every openreview-py developer has one):
 
 ```bash
 git clone https://github.com/openreview/openreview-mcp.git
 cd openreview-mcp
 docker build -t openreview-mcp .
 
+# Adjust the path to your local openreview-py checkout
 docker run -d --name openreview-mcp -p 8080:8080 \
+  -v /path/to/your/openreview-py:/openreview-py \
   openreview-mcp --transport streamable-http
 ```
+
+No env var needed — the image already sets `OPENREVIEW_KNOWLEDGE_PATH=/openreview-py`. Drop the `-v` flag if you don't need `search_test_examples`; the other three tools (`search_api`, `get_method_signature`, `get_best_practices`) work without any mount, and the tests-index tool returns a clear "disabled" message.
 
 Add to `.mcp.json` (project-level) **or** to `~/.claude.json` under the relevant project's `mcpServers`:
 
@@ -39,30 +43,32 @@ Add to `.mcp.json` (project-level) **or** to `~/.claude.json` under the relevant
 }
 ```
 
-Restart Claude Code (`/exit` and relaunch). All 4 tools become available; `search_test_examples` indexes the `openreview-py/tests/` directory baked into the image at container start.
+Restart Claude Code (`/exit` and relaunch). All 4 tools become available; `search_test_examples` indexes the bind-mounted `openreview-py/tests/` directory at container start.
 
-**To upgrade later** (picks up new `openreview-mcp` code, new upstream `openreview-py`, and new tests):
+**To upgrade later** (picks up new `openreview-mcp` code and new upstream `openreview-py` for the introspection layer):
 
 ```bash
 git pull && docker build --no-cache -t openreview-mcp .
 docker stop openreview-mcp && docker rm openreview-mcp
 docker run -d --name openreview-mcp -p 8080:8080 \
-  openreview-mcp --transport streamable-http
-```
-
-`--no-cache` is what forces both the pip-installed `openreview-py` and the cloned tests directory to refresh to the latest upstream `main`.
-
-### Use a local `openreview-py` checkout
-
-If you're editing `openreview-py` and want the MCP to reflect your working tree (live introspection + tests-index against your branch), bind-mount it on top of the baked-in clone:
-
-```bash
-docker run -d --name openreview-mcp -p 8080:8080 \
   -v /path/to/your/openreview-py:/openreview-py \
   openreview-mcp --transport streamable-http
 ```
 
-No env var needed — the image already sets `OPENREVIEW_KNOWLEDGE_PATH=/openreview-py`, so the bind mount transparently replaces the baked-in clone.
+`--no-cache` forces pip to refetch the latest `openreview-py` for introspection. The tests-index comes from your bind-mount, so `git pull` in `/path/to/your/openreview-py` is what refreshes that layer — no image rebuild needed for upstream-test changes.
+
+### Build a self-contained image (Cloud Run / VM deployments)
+
+When the host filesystem won't be available — e.g., shipping to Cloud Run, a managed VM, or a teammate without an `openreview-py` clone — opt in to baking a shallow upstream clone into the image:
+
+```bash
+docker build --build-arg CLONE_OPENREVIEW_PY=true -t openreview-mcp:full .
+
+docker run -d --name openreview-mcp -p 8080:8080 \
+  openreview-mcp:full --transport streamable-http
+```
+
+Adds ~60 MB and an implicit dependency on GitHub at build time, but no `-v` needed at runtime. A runtime bind-mount at `/openreview-py` still works and transparently replaces the baked-in clone for live-edit workflows.
 
 ### Alternative: stdio per-call (no long-running service)
 
@@ -73,7 +79,11 @@ If you'd rather Claude Code spawn a fresh container on every tool call (lower id
   "mcpServers": {
     "openreview": {
       "command": "docker",
-      "args": ["run", "--rm", "-i", "openreview-mcp"]
+      "args": [
+        "run", "--rm", "-i",
+        "-v", "/path/to/your/openreview-py:/openreview-py",
+        "openreview-mcp"
+      ]
     }
   }
 }
@@ -106,7 +116,7 @@ openreview-mcp [--transport stdio|sse|streamable-http] [--port 8080] [--host 0.0
 
 | Var | Purpose |
 |-----|---------|
-| `OPENREVIEW_KNOWLEDGE_PATH` | Directory hint for `search_test_examples` and (optionally) for an override `best_practices.md`. The Dockerfile sets this to `/openreview-py` (the baked-in clone) by default. If it contains a `best_practices.md`, that file is loaded instead of the bundled one (otherwise the bundled copy is used — no error). The `tests/` subdir under this path is what `search_test_examples` indexes. |
+| `OPENREVIEW_KNOWLEDGE_PATH` | Directory hint for `search_test_examples` and (optionally) for an override `best_practices.md`. The Dockerfile sets this to `/openreview-py` by default — bind-mount your local checkout there, or use `--build-arg CLONE_OPENREVIEW_PY=true` to bake an upstream clone into the image. If the resolved directory contains a `best_practices.md`, that file is loaded instead of the bundled one (otherwise the bundled copy is used — no error). The `tests/` subdir under this path is what `search_test_examples` indexes; if it doesn't exist, the tool returns a clear disabled message and the other three tools work unaffected. |
 | `OPENREVIEW_TESTS_PATH` | Explicit override for the `tests/` directory used by `search_test_examples`. Falls back to `{OPENREVIEW_KNOWLEDGE_PATH}/tests/`. |
 
 ## Reusable Registration
@@ -125,7 +135,7 @@ The server has three layers, each with a different freshness story:
 
 - **Introspection** (`search_api`, `get_method_signature`) — reads the installed `openreview-py` at startup. Refreshes when you rebuild the image; `--no-cache` forces pip to refetch upstream `main`.
 - **Static knowledge** (`get_best_practices`) — reads `best_practices.md` (concepts, conventions, anti-patterns; the rules tests assert but never explain). Curated and edited in this repo; bundled inside the image. Refresh by editing `openreview_mcp/knowledge_files/best_practices.md` and rebuilding.
-- **Test-suite index** (`search_test_examples`) — AST-indexed at startup from the `openreview-py/tests/` directory that the Dockerfile clones into `/openreview-py`. Refresh by rebuilding with `--no-cache` (forces the clone layer to re-fetch), or bind-mount your own checkout at `/openreview-py` for live-edit workflows.
+- **Test-suite index** (`search_test_examples`) — AST-indexed at startup from the `tests/` subdir of `/openreview-py` inside the container. Default workflow: bind-mount your local `openreview-py` checkout at `/openreview-py`; `git pull` in that checkout + restart the container refreshes the index. For self-contained builds (Cloud Run / VM), opt in with `--build-arg CLONE_OPENREVIEW_PY=true` and `docker build --no-cache` re-fetches upstream.
 
 ## Development
 
