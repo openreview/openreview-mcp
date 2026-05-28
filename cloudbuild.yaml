@@ -1,0 +1,30 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --platform=linux/amd64
+      - --build-arg=CLONE_OPENREVIEW_PY=true
+      - -t
+      - us-docker.pkg.dev/$PROJECT_ID/openreview-images/openreview-mcp:$COMMIT_SHA
+      - -t
+      - us-docker.pkg.dev/$PROJECT_ID/openreview-images/openreview-mcp:latest
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - us-docker.pkg.dev/$PROJECT_ID/openreview-images/openreview-mcp
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    args:
+      - gcloud
+      - run
+      - deploy
+      - openreview-mcp
+      - --image=us-docker.pkg.dev/$PROJECT_ID/openreview-images/openreview-mcp:$COMMIT_SHA
+      - --region=us-central1
+      - --project=$PROJECT_ID
+
+options:
+  logging: CLOUD_LOGGING_ONLY
