@@ -1,6 +1,6 @@
 # OpenReview Python MCP Server
 
-MCP server that helps LLMs write correct `openreview-py` code. Two knowledge layers: **live introspection** of the installed library (method signatures, docstrings, class structures) and **static knowledge** (best practices, code examples, workflow guides).
+MCP server that helps LLMs write correct `openreview-py` code. Two knowledge layers: **live introspection** of the installed library (method signatures, docstrings, class structures) and a **test-suite index** over the upstream `openreview-py/tests/` directory (real call sites).
 
 ## Tools
 
@@ -8,7 +8,6 @@ MCP server that helps LLMs write correct `openreview-py` code. Two knowledge lay
 |------|---------|
 | `search_api` | Search OpenReview API methods by topic (results tagged `[v1]`/`[v2]`) |
 | `get_method_signature` | Get detailed method signatures and docstrings |
-| `get_best_practices` | Concepts, conventions, and anti-patterns from `best_practices.md` (curated in this repo) |
 | `search_test_examples` | Real call sites from the upstream `openreview-py/tests/` directory (auto-indexed) |
 
 ## Usage
@@ -28,7 +27,7 @@ docker run -d --name openreview-mcp -p 8080:8080 \
   openreview-mcp --transport streamable-http
 ```
 
-No env var needed — the image already sets `OPENREVIEW_KNOWLEDGE_PATH=/openreview-py`. Drop the `-v` flag if you don't need `search_test_examples`; the other three tools (`search_api`, `get_method_signature`, `get_best_practices`) work without any mount, and the tests-index tool returns a clear "disabled" message.
+No env var needed — the image already sets `OPENREVIEW_KNOWLEDGE_PATH=/openreview-py`. Drop the `-v` flag if you don't need `search_test_examples`; the other two tools (`search_api`, `get_method_signature`) work without any mount, and the tests-index tool returns a clear "disabled" message.
 
 Add to `.mcp.json` (project-level) **or** to `~/.claude.json` under the relevant project's `mcpServers`:
 
@@ -43,7 +42,7 @@ Add to `.mcp.json` (project-level) **or** to `~/.claude.json` under the relevant
 }
 ```
 
-Restart Claude Code (`/exit` and relaunch). All 4 tools become available; `search_test_examples` indexes the bind-mounted `openreview-py/tests/` directory at container start.
+Restart Claude Code (`/exit` and relaunch). All 3 tools become available; `search_test_examples` indexes the bind-mounted `openreview-py/tests/` directory at container start.
 
 **To stop the server:**
 
@@ -122,7 +121,7 @@ openreview-mcp [--transport stdio|sse|streamable-http] [--port 8080] [--host 0.0
 
 | Var | Purpose |
 |-----|---------|
-| `OPENREVIEW_KNOWLEDGE_PATH` | Directory hint for `search_test_examples` and (optionally) for an override `best_practices.md`. The Dockerfile sets this to `/openreview-py` by default — bind-mount your local checkout there, or use `--build-arg CLONE_OPENREVIEW_PY=true` to bake an upstream clone into the image. If the resolved directory contains a `best_practices.md`, that file is loaded instead of the bundled one (otherwise the bundled copy is used — no error). The `tests/` subdir under this path is what `search_test_examples` indexes; if it doesn't exist, the tool returns a clear disabled message and the other three tools work unaffected. |
+| `OPENREVIEW_KNOWLEDGE_PATH` | Directory hint for `search_test_examples`. The Dockerfile sets this to `/openreview-py` by default — bind-mount your local checkout there, or use `--build-arg CLONE_OPENREVIEW_PY=true` to bake an upstream clone into the image. The `tests/` subdir under this path is what `search_test_examples` indexes; if it doesn't exist, the tool returns a clear disabled message and the other two tools work unaffected. |
 | `OPENREVIEW_TESTS_PATH` | Explicit override for the `tests/` directory used by `search_test_examples`. Falls back to `{OPENREVIEW_KNOWLEDGE_PATH}/tests/`. |
 
 ## Reusable Registration
@@ -132,15 +131,14 @@ Other FastMCP servers can mount the knowledge tools without running the full ser
 ```python
 from openreview_mcp.registration import register_knowledge_tools
 
-register_knowledge_tools(mcp)  # mounts 4 knowledge tools onto your FastMCP instance
+register_knowledge_tools(mcp)  # mounts 3 knowledge tools onto your FastMCP instance
 ```
 
 ## Keeping Up with openreview-py
 
-The server has three layers, each with a different freshness story:
+The server has two layers, each with a different freshness story:
 
 - **Introspection** (`search_api`, `get_method_signature`) — reads the installed `openreview-py` at startup. Refreshes when you rebuild the image; `--no-cache` forces pip to refetch upstream `main`.
-- **Static knowledge** (`get_best_practices`) — reads `best_practices.md` (concepts, conventions, anti-patterns; the rules tests assert but never explain). Curated and edited in this repo; bundled inside the image. Refresh by editing `openreview_mcp/knowledge_files/best_practices.md` and rebuilding.
 - **Test-suite index** (`search_test_examples`) — AST-indexed at startup from the `tests/` subdir of `/openreview-py` inside the container. Default workflow: bind-mount your local `openreview-py` checkout at `/openreview-py`; `git pull` in that checkout + restart the container refreshes the index. For self-contained builds (Cloud Run / VM), opt in with `--build-arg CLONE_OPENREVIEW_PY=true` and `docker build --no-cache` re-fetches upstream.
 
 ## Development

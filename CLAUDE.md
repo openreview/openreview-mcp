@@ -1,5 +1,5 @@
 Project Overview & Context:
-This project is an MCP server built with FastMCP that helps LLMs write correct openreview-py code. It provides three knowledge layers: live introspection of the installed openreview-py library (method signatures, docstrings, class structures); a curated `best_practices.md` of concepts, conventions, and anti-patterns (maintained in this repo, not synced from upstream); and an AST-postings index over the upstream `openreview-py/tests/` directory for real call sites. The server exposes 4 tools. Built with Python 3.11+.
+This project is an MCP server built with FastMCP that helps LLMs write correct openreview-py code. It provides two knowledge layers: live introspection of the installed openreview-py library (method signatures, docstrings, class structures); and an AST-postings index over the upstream `openreview-py/tests/` directory for real call sites. The server exposes 3 tools. Built with Python 3.11+.
 
 Project Structure:
 ```
@@ -9,16 +9,11 @@ openreview-mcp/
 │   ├── registration.py         # Reusable register_knowledge_tools(mcp) — zero import side effects
 │   ├── server.py               # Thin FastMCP standalone entry point
 │   ├── introspection.py        # Live introspection via inspect module
-│   ├── knowledge.py            # Static knowledge parser (best_practices.md)
-│   ├── tests_index.py          # AST-postings index over upstream openreview-py tests
-│   └── knowledge_files/
-│       └── best_practices.md   # Curated concepts/conventions/anti-patterns (edited in this repo)
+│   └── tests_index.py          # AST-postings index over upstream openreview-py tests
 ├── tests/
 │   ├── conftest.py             # Shared fixtures
 │   ├── test_introspection.py   # Layer 1: introspection unit tests
-│   ├── test_knowledge.py       # Layer 2: knowledge parsing unit tests
-│   ├── test_tests_index.py     # Layer 3: tests-index unit tests (hermetic fixtures)
-│   ├── test_bundled_knowledge.py  # Release-time bundling regression guard
+│   ├── test_tests_index.py     # Layer 2: tests-index unit tests (hermetic fixtures)
 │   ├── test_registration.py    # Tests for register_knowledge_tools
 │   ├── test_tools.py           # Tool behavior via FastMCP fixture
 │   └── fixtures/
@@ -29,20 +24,19 @@ openreview-mcp/
 └── README.md
 ```
 
-Key files: `openreview_mcp/registration.py` (the reusable `register_knowledge_tools` function that defines the tools as closures), `openreview_mcp/server.py` (thin standalone entry point), `openreview_mcp/introspection.py` (live introspection), `openreview_mcp/knowledge.py` (static knowledge parser), `openreview_mcp/tests_index.py` (AST-postings index over upstream openreview-py tests, lazy body read via linecache).
+Key files: `openreview_mcp/registration.py` (the reusable `register_knowledge_tools` function that defines the tools as closures), `openreview_mcp/server.py` (thin standalone entry point), `openreview_mcp/introspection.py` (live introspection), `openreview_mcp/tests_index.py` (AST-postings index over upstream openreview-py tests, lazy body read via linecache).
 
 Public API:
-- `from openreview_mcp import register_knowledge_tools` — mounts the 5 knowledge tools onto any FastMCP instance. Zero import side effects (introspection and knowledge loading happen at call time, not import). Returns a `dict[str, Callable[..., str]]` of tool handles keyed by name. Downstream consumers can import and use this to combine the knowledge tools with their own MCP tools on a single server.
+- `from openreview_mcp import register_knowledge_tools` — mounts the 3 knowledge tools onto any FastMCP instance. Zero import side effects (introspection and index building happen at call time, not import). Returns a `dict[str, Callable[..., str]]` of tool handles keyed by name. Downstream consumers can import and use this to combine the knowledge tools with their own MCP tools on a single server.
 
 Environment Variables:
-- `OPENREVIEW_KNOWLEDGE_PATH` (optional): directory hint. **The Docker image sets this to `/openreview-py` by default**, expecting either a runtime bind-mount of a local `openreview-py` checkout there, or — if you built with `--build-arg CLONE_OPENREVIEW_PY=true` — a baked-in shallow clone at the same path. If the resolved directory contains a `best_practices.md`, that file is loaded instead of the bundled one (otherwise the bundled copy is used — no error). If it also contains a `tests/` subdir, the test-suite index uses it; otherwise `search_test_examples` returns a clear disabled message and the other three tools work unaffected. The bundled `best_practices.md` is the source of truth — it is edited in this repo and not synced from upstream.
+- `OPENREVIEW_KNOWLEDGE_PATH` (optional): directory hint for the `search_test_examples` tests index. **The Docker image sets this to `/openreview-py` by default**, expecting either a runtime bind-mount of a local `openreview-py` checkout there, or — if you built with `--build-arg CLONE_OPENREVIEW_PY=true` — a baked-in shallow clone at the same path. If the resolved directory contains a `tests/` subdir, the test-suite index uses it; otherwise `search_test_examples` returns a clear disabled message and the other two tools work unaffected.
 - `OPENREVIEW_TESTS_PATH` (optional): explicit path to an `openreview-py/tests/` directory for the `search_test_examples` tool. If unset, falls back to `{OPENREVIEW_KNOWLEDGE_PATH}/tests/` when it exists. If still unresolved, `search_test_examples` returns a clear disabled message and the other tools work unaffected.
 
-Tools (4 total):
+Tools (3 total):
 1. `search_api(query, class_name?)` — Search methods/classes by keyword with relevance ranking; results tagged `[v1]` / `[v2]`
 2. `get_method_signature(method_name)` — Full details for a specific method (includes `**API:**` v1/v2 marker)
-3. `get_best_practices(topic)` — Concepts, conventions, and anti-patterns from `best_practices.md` (curated in this repo)
-4. `search_test_examples(query, max_results=5)` — Real call sites from the upstream openreview-py test suite (auto-current; AST-indexed at registration time)
+3. `search_test_examples(query, max_results=5)` — Real call sites from the upstream openreview-py test suite (auto-current; AST-indexed at registration time)
 
 Code Style & Conventions:
 - snake_case for files and functions, PascalCase for classes
@@ -56,7 +50,7 @@ Running Tests:
 .venv/bin/python -m pytest tests/ -v
 ```
 
-No environment variables required — tests use the bundled `best_practices.md` and the hermetic fixtures in `tests/fixtures/`.
+No environment variables required — tests use the hermetic fixtures in `tests/fixtures/`.
 
 ---
 
@@ -142,7 +136,7 @@ If not using conda (plain pip install), the simpler form works:
 }
 ```
 
-The `best_practices.md` knowledge file is bundled inside the package, and the Docker image pre-sets `OPENREVIEW_KNOWLEDGE_PATH=/openreview-py`. By default no upstream clone is baked into the image — the canonical workflow is to bind-mount a local `openreview-py` checkout at `/openreview-py` so `search_test_examples` reads the working tree directly. Without the bind-mount the tests-index tool returns a "disabled" message and the other three tools work fine.
+The Docker image pre-sets `OPENREVIEW_KNOWLEDGE_PATH=/openreview-py`. By default no upstream clone is baked into the image — the canonical workflow is to bind-mount a local `openreview-py` checkout at `/openreview-py` so `search_test_examples` reads the working tree directly. Without the bind-mount the tests-index tool returns a "disabled" message and the other two tools work fine.
 
 For non-Docker installs (e.g., a pip-installed CLI), point `OPENREVIEW_KNOWLEDGE_PATH` at your local `openreview-py` checkout via an `env` block:
 ```json
@@ -157,7 +151,7 @@ Note: `.mcp.json` is gitignored (contains machine-specific absolute paths). Each
 
 ### Step 6: Restart Claude Code
 
-Tell the user to restart Claude Code (`/exit` and relaunch) for it to pick up the new `.mcp.json`. After restart, the 5 openreview MCP tools will be available.
+Tell the user to restart Claude Code (`/exit` and relaunch) for it to pick up the new `.mcp.json`. After restart, the 3 openreview MCP tools will be available.
 
 ### Step 7: Verify
 

@@ -45,8 +45,3 @@ def test_get_method_signature_labels_api_version(tools):
     text = tools["get_method_signature"](method_name="get_invitations")
     assert "**API:** v2" in text
     assert "**API:** v1" in text
-
-
-def test_get_best_practices_returns_section(tools):
-    text = tools["get_best_practices"](topic="authentication")
-    assert "token" in text.lower()

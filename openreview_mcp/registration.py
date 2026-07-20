@@ -18,10 +18,6 @@ from openreview_mcp.introspection import (
     introspect_library,
     search_methods,
 )
-from openreview_mcp.knowledge import (
-    load_knowledge,
-    search_best_practices,
-)
 from openreview_mcp.tests_index import (
     build_test_index,
     format_test_results,
@@ -29,38 +25,6 @@ from openreview_mcp.tests_index import (
 )
 
 logger = logging.getLogger("openreview_mcp")
-
-_BUNDLED_KNOWLEDGE_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "knowledge_files"
-)
-
-
-_BUNDLED_BEST_PRACTICES_FILE = os.path.join(
-    _BUNDLED_KNOWLEDGE_DIR, "best_practices.md"
-)
-
-
-def _resolve_best_practices_file(override: str | None = None) -> str:
-    """Resolve which best_practices.md to load.
-
-    Priority: explicit `knowledge_path` arg > OPENREVIEW_KNOWLEDGE_PATH env var
-    (each expected to be a directory containing `best_practices.md`) > the
-    bundled file shipped inside the package. If the resolved directory does
-    not contain `best_practices.md`, falls back to the bundled file — this is
-    the common case when callers point OPENREVIEW_KNOWLEDGE_PATH at an
-    `openreview-py` checkout to enable the test-suite index; the
-    best-practices content always comes from this repo.
-    """
-    candidate_dir = override or os.environ.get("OPENREVIEW_KNOWLEDGE_PATH")
-    if candidate_dir:
-        candidate = os.path.join(candidate_dir, "best_practices.md")
-        if os.path.isfile(candidate):
-            return candidate
-        logger.info(
-            "best_practices.md not found at %s; using bundled copy.",
-            candidate,
-        )
-    return _BUNDLED_BEST_PRACTICES_FILE
 
 
 def _resolve_tests_path(
@@ -134,20 +98,16 @@ def register_knowledge_tools(
 ) -> dict[str, Callable[..., str]]:
     """Register the knowledge tools onto the given FastMCP instance.
 
-    Reads/introspects the installed `openreview-py` and loads the bundled (or
-    override) knowledge files at call time — not at import time. Optionally
-    builds an index over the upstream openreview-py test suite for the
-    `search_test_examples` tool; the tool is registered either way and
-    returns a clear disabled message when the index is unavailable.
+    Introspects the installed `openreview-py` at call time — not at import
+    time. Optionally builds an index over the upstream openreview-py test
+    suite for the `search_test_examples` tool; the tool is registered either
+    way and returns a clear disabled message when the index is unavailable.
 
     Args:
         mcp: The FastMCP server to register tools on.
-        knowledge_path: Optional directory containing `best_practices.md`.
-            Falls back to the OPENREVIEW_KNOWLEDGE_PATH env var, then to the
-            bundled file inside the package. If the resolved directory does
-            not contain `best_practices.md`, the bundled copy is used — so
-            pointing this at an `openreview-py` checkout (to enable the
-            test-suite index via `{knowledge_path}/tests/`) does not error.
+        knowledge_path: Optional directory hint used to auto-detect the
+            openreview-py `tests/` subdir for the test-suite index. Falls
+            back to the OPENREVIEW_KNOWLEDGE_PATH env var.
         tests_path: Optional path to an openreview-py `tests/` directory.
             Falls back to OPENREVIEW_TESTS_PATH, then to `{knowledge_path}/tests/`
             when that subdir exists.
@@ -156,20 +116,12 @@ def register_knowledge_tools(
         A dict mapping tool name to the registered tool function, primarily
         for direct test access. Production code can ignore the return value.
     """
-    best_practices_file = _resolve_best_practices_file(knowledge_path)
-
     logger.info("Introspecting openreview-py library...")
     introspection_cache = introspect_library()
     logger.info(
         "Introspected %d classes, %d methods total",
         len(introspection_cache),
         sum(len(m) for m in introspection_cache.values()),
-    )
-
-    logger.info("Loading best practices from %s", best_practices_file)
-    knowledge_base = load_knowledge(best_practices_file)
-    logger.info(
-        "Loaded %d practice sections", len(knowledge_base.practices)
     )
 
     # The tests-path auto-detect still uses the original env var / arg as a
@@ -228,21 +180,6 @@ def register_knowledge_tools(
         return _format_method_details(results)
 
     @mcp.tool()
-    def get_best_practices(topic: str) -> str:
-        """Get openreview-py best practices and rules for a topic.
-
-        Returns the relevant section from the best practices guide covering
-        authentication, permissions, data model, constraints, anti-patterns, etc.
-
-        Args:
-            topic: Topic keyword (e.g., "authentication", "permissions", "content structure", "anti-patterns")
-        """
-        result = search_best_practices(topic, knowledge_base)
-        if not result:
-            return f"No best practices found for topic: {topic}"
-        return result
-
-    @mcp.tool()
     def search_test_examples(query: str, max_results: int = 5) -> str:
         """Find real usage examples from the openreview-py test suite.
 
@@ -272,6 +209,5 @@ def register_knowledge_tools(
     return {
         "search_api": search_api,
         "get_method_signature": get_method_signature,
-        "get_best_practices": get_best_practices,
         "search_test_examples": search_test_examples,
     }
