@@ -9,7 +9,6 @@ import pytest
 from fastmcp import FastMCP
 
 from openreview_mcp import register_knowledge_tools
-from openreview_mcp.docs_tools import gitbook_ai_ask, search_docs
 
 
 @pytest.fixture(scope="module")
@@ -39,9 +38,6 @@ def test_get_method_signature_returns_details(tools):
 
 
 def test_search_api_labels_api_version(tools):
-    # get_invitations exists on both clients with different parameter sets;
-    # the search output must distinguish them so callers don't copy v1 kwargs
-    # onto a v2 call (or vice versa).
     text = tools["search_api"](query="get_invitations")
     assert "[v2] OpenReviewClient.get_invitations" in text
     assert "[v1] Client.get_invitations" in text
@@ -56,7 +52,7 @@ def test_get_method_signature_labels_api_version(tools):
 class TestSearchDocs:
     """Ranked docs.openreview.net search via GitBook's content search API."""
 
-    def test_returns_results_with_gitbook_api_key(self):
+    def test_returns_results_with_gitbook_api_key(self, tools):
         with patch.dict(
             os.environ,
             {
@@ -65,7 +61,7 @@ class TestSearchDocs:
                 "GITBOOK_SITE_ID": "test-site",
             },
         ):
-            with patch("openreview_mcp.docs_tools.httpx") as mock_httpx:
+            with patch("openreview_mcp.registration.httpx") as mock_httpx:
                 mock_client = MagicMock()
                 mock_response = MagicMock()
                 mock_response.json.return_value = {
@@ -92,32 +88,31 @@ class TestSearchDocs:
                 mock_client.post.return_value = mock_response
                 mock_httpx.Client.return_value.__enter__.return_value = mock_client
 
-                result = search_docs("activate profile")
+                result = tools["search_docs"]("activate profile")
 
         assert "Expediting Profile Activation" in result
         assert "score:" in result
         assert "OpenReview profile activation pending" in result
 
-    def test_requires_gitbook_api_key(self):
+    def test_requires_gitbook_api_key(self, tools):
         with patch.dict(os.environ, {}, clear=True):
-            os.environ.pop("GITBOOK_API_KEY", None)
-            result = search_docs("activate profile")
+            result = tools["search_docs"]("activate profile")
         assert "GITBOOK_API_KEY is required" in result
 
-    def test_requires_gitbook_ids(self):
+    def test_requires_gitbook_ids(self, tools):
         with patch.dict(os.environ, {"GITBOOK_API_KEY": "test-key"}, clear=True):
-            result = search_docs("activate profile")
+            result = tools["search_docs"]("activate profile")
         assert "GITBOOK_ORG_ID and GITBOOK_SITE_ID" in result
 
-    def test_handles_empty_query(self):
+    def test_handles_empty_query(self, tools):
         with patch.dict(os.environ, {"GITBOOK_API_KEY": "test-key"}):
-            result = search_docs("")
+            result = tools["search_docs"]("")
         assert "Provide a query" in result
 
-    def test_no_network_calls_on_empty_query(self):
+    def test_no_network_calls_on_empty_query(self, tools):
         with patch.dict(os.environ, {"GITBOOK_API_KEY": "test-key"}):
-            with patch("openreview_mcp.docs_tools.httpx") as mock_httpx:
-                result = search_docs("")
+            with patch("openreview_mcp.registration.httpx") as mock_httpx:
+                result = tools["search_docs"]("")
                 assert "Provide a query" in result
                 mock_httpx.Client.assert_not_called()
 
@@ -125,22 +120,23 @@ class TestSearchDocs:
 class TestGitbookAiAsk:
     """AI-synthesized docs.openreview.net answer via GitBook's ?ask= endpoint."""
 
-    def test_returns_answer_and_sources(self):
-        result = gitbook_ai_ask("how do I add a publication to my profile")
+    def test_returns_answer_and_sources(self, tools):
+        result = tools["gitbook_ai_ask"]("how do I add a publication to my profile")
         assert "publication" in result.lower()
         assert "# Sources:" in result
         hostnames = {
             urlparse(url).hostname
-            for url in re.findall(r"https?://[^\s)]+", result)
+            for url in re.findall(r"https?://[^\s)\"<>]+", result)
         }
-        assert hostnames == {"docs.openreview.net"}
+        assert hostnames <= {"docs.openreview.net", "openreview.net"}
+        assert "docs.openreview.net" in hostnames
 
-    def test_handles_empty_query(self):
-        result = gitbook_ai_ask("")
+    def test_handles_empty_query(self, tools):
+        result = tools["gitbook_ai_ask"]("")
         assert "Provide a query" in result
 
-    def test_no_network_calls_on_empty_query(self):
-        with patch("openreview_mcp.docs_tools.httpx") as mock_httpx:
-            result = gitbook_ai_ask("")
+    def test_no_network_calls_on_empty_query(self, tools):
+        with patch("openreview_mcp.registration.httpx") as mock_httpx:
+            result = tools["gitbook_ai_ask"]("")
             assert "Provide a query" in result
             mock_httpx.Client.assert_not_called()

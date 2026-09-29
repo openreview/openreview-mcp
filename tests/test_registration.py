@@ -12,6 +12,8 @@ EXPECTED_TOOLS = {
     "search_api",
     "get_method_signature",
     "search_test_examples",
+    "search_docs",
+    "gitbook_ai_ask",
 }
 
 FAKE_TESTS_DIR = os.path.join(
