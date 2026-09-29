@@ -13,6 +13,7 @@ from typing import Any
 
 from fastmcp import FastMCP
 
+from openreview_mcp.docs_tools import gitbook_ai_ask, search_docs
 from openreview_mcp.introspection import (
     get_method_details,
     introspect_library,
@@ -180,6 +181,40 @@ def register_knowledge_tools(
         return _format_method_details(results)
 
     @mcp.tool()
+    def gitbook_ai_ask(query: str) -> str:
+        """Ask docs.openreview.net a question and get an AI-synthesized answer.
+
+        Use this when the question is about docs.openreview.net guidance
+        (profiles, submissions, reviews, venues, moderation, etc.). It fetches
+        the live docs site and returns the top answer with source URLs.
+
+        Args:
+            query: Plain-language question or keywords (e.g.
+                'how do I add a publication to my profile',
+                'how to merge profiles',
+                'openreview direct upload license').
+        """
+        from openreview_mcp.docs_tools import gitbook_ai_ask as _gitbook_ai_ask
+
+        return _gitbook_ai_ask(query)
+
+    @mcp.tool()
+    def search_docs(query: str) -> str:
+        """Search docs.openreview.net and return ranked page/section matches.
+
+        Use this when you want actual docs content rather than a synthesized
+        answer. Returns page titles, paths, and section snippets ordered by
+        relevance.
+
+        Args:
+            query: Keywords or a plain-language question (e.g.
+                'activate profile', 'merge profiles', 'direct upload license').
+        """
+        from openreview_mcp.docs_tools import search_docs as _search_docs
+
+        return _search_docs(query)
+
+    @mcp.tool()
     def search_test_examples(query: str, max_results: int = 5) -> str:
         """Find real usage examples from the openreview-py test suite.
 
@@ -209,5 +244,7 @@ def register_knowledge_tools(
     return {
         "search_api": search_api,
         "get_method_signature": get_method_signature,
+        "search_docs": search_docs,
+        "gitbook_ai_ask": gitbook_ai_ask,
         "search_test_examples": search_test_examples,
     }
