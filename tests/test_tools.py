@@ -124,12 +124,15 @@ class TestGitbookAiAsk:
         result = tools["gitbook_ai_ask"]("how do I add a publication to my profile")
         assert "publication" in result.lower()
         assert "# Sources:" in result
-        hostnames = {
-            urlparse(url).hostname
-            for url in re.findall(r"https?://[^\s)\"<>]+", result)
-        }
-        assert hostnames <= {"docs.openreview.net", "openreview.net"}
-        assert "docs.openreview.net" in hostnames
+        allowed_hosts = {"docs.openreview.net", "openreview.net"}
+        docs_hostname = urlparse("https://docs.openreview.net").hostname
+        docs_count = 0
+        for url in re.findall(r"https?://[^\s)\"<>]+", result):
+            hostname = urlparse(url).hostname
+            assert hostname in allowed_hosts
+            if hostname == docs_hostname:
+                docs_count += 1
+        assert docs_count > 0
 
     def test_handles_empty_query(self, tools):
         result = tools["gitbook_ai_ask"]("")
