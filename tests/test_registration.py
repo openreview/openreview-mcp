@@ -8,10 +8,13 @@ from fastmcp import FastMCP
 from openreview_mcp import register_knowledge_tools
 
 
-EXPECTED_TOOLS = {
+CORE_TOOLS = {
     "search_api",
     "get_method_signature",
     "search_test_examples",
+}
+
+DOCS_TOOLS = {
     "search_docs",
     "gitbook_ai_ask",
 }
@@ -22,24 +25,44 @@ FAKE_TESTS_DIR = os.path.join(
 
 
 class TestRegisterKnowledgeTools:
-    def test_registers_all_tools(self):
+    def test_registers_core_tools(self):
         mcp = FastMCP("test")
         register_knowledge_tools(mcp)
 
         tools = asyncio.run(mcp.list_tools())
         tool_names = {t.name for t in tools}
 
-        assert EXPECTED_TOOLS.issubset(tool_names), (
-            f"Missing tools: {EXPECTED_TOOLS - tool_names}"
+        assert CORE_TOOLS.issubset(tool_names), (
+            f"Missing tools: {CORE_TOOLS - tool_names}"
         )
 
-    def test_returns_dict_of_tool_handles(self):
-        """register_knowledge_tools returns a dict keyed by tool name for direct test access."""
+    def test_skips_docs_tools_without_gitbook_env(self, monkeypatch):
+        monkeypatch.delenv("GITBOOK_API_KEY", raising=False)
+        monkeypatch.delenv("GITBOOK_ORG_ID", raising=False)
+        monkeypatch.delenv("GITBOOK_SITE_ID", raising=False)
         mcp = FastMCP("test")
-        handles = register_knowledge_tools(mcp)
+        register_knowledge_tools(mcp)
 
-        assert isinstance(handles, dict)
-        assert set(handles.keys()) == EXPECTED_TOOLS
+        tools = asyncio.run(mcp.list_tools())
+        tool_names = {t.name for t in tools}
+
+        assert DOCS_TOOLS.isdisjoint(tool_names), (
+            f"Unexpectedly registered docs tools: {DOCS_TOOLS & tool_names}"
+        )
+
+    def test_registers_docs_tools_with_gitbook_env(self, monkeypatch):
+        monkeypatch.setenv("GITBOOK_API_KEY", "test-key")
+        monkeypatch.setenv("GITBOOK_ORG_ID", "test-org")
+        monkeypatch.setenv("GITBOOK_SITE_ID", "test-site")
+        mcp = FastMCP("test")
+        register_knowledge_tools(mcp)
+
+        tools = asyncio.run(mcp.list_tools())
+        tool_names = {t.name for t in tools}
+
+        assert DOCS_TOOLS.issubset(tool_names), (
+            f"Missing docs tools: {DOCS_TOOLS - tool_names}"
+        )
 
     def test_returned_handles_are_callable(self):
         """Each returned handle must be directly callable against real introspection data."""
