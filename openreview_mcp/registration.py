@@ -270,7 +270,12 @@ def register_knowledge_tools(
             if len(body) > max_len:
                 sources_idx = body.rfind("# Sources:")
                 if sources_idx > 0:
-                    body = body[: max(max_len, sources_idx)]
+                    sources = body[sources_idx:]
+                    if len(sources) + 2 < max_len:
+                        answer_budget = max_len - len(sources) - 2
+                        body = body[:answer_budget].rstrip() + "\n\n" + sources
+                    else:
+                        body = body[:max_len]
                 else:
                     body = body[:max_len]
                 body = body.rstrip() + "\n\n[Answer truncated due to length]"
