@@ -109,6 +109,14 @@ def _format_search_result(item: dict[str, Any]) -> str:
     lines.append(f"### {title} (score: {score})")
     if item_id:
         lines.append(f"ID: {item_id}")
+    if item.get("type") == "record":
+        url = item.get("url", "")
+        description = (item.get("description") or "").strip()
+        if url:
+            lines.append(f"URL: {url}")
+        if description:
+            lines.append(description)
+        return "\n".join(lines)
     pages = item.get("pages") or []
     for page in pages[:5]:
         page_title = page.get("title", "Untitled page")
