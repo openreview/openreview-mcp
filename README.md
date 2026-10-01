@@ -9,6 +9,10 @@ MCP server that helps LLMs write correct `openreview-py` code. Two knowledge lay
 | `search_api` | Search OpenReview API methods by topic (results tagged `[v1]`/`[v2]`) |
 | `get_method_signature` | Get detailed method signatures and docstrings |
 | `search_test_examples` | Real call sites from the upstream `openreview-py/tests/` directory (auto-indexed) |
+| `search_docs` | Search docs.openreview.net pages and sections (GitBook; optional) |
+| `gitbook_ai_ask` | Ask docs.openreview.net a question and get an AI-synthesized answer (GitBook; optional) |
+
+The two GitBook-backed tools are only registered when `GITBOOK_API_KEY`, `GITBOOK_ORG_ID`, and `GITBOOK_SITE_ID` are set. Without them, the server still serves the core tools above.
 
 ## Usage
 
@@ -24,6 +28,9 @@ docker build -t openreview-mcp .
 # Adjust the path to your local openreview-py checkout
 docker run -d --name openreview-mcp -p 8080:8080 \
   -v /path/to/your/openreview-py:/openreview-py \
+  -e GITBOOK_API_KEY=your-api-key \
+  -e GITBOOK_ORG_ID=your-org-id \
+  -e GITBOOK_SITE_ID=your-site-id \
   openreview-mcp --transport streamable-http
 ```
 
@@ -123,6 +130,11 @@ openreview-mcp [--transport stdio|sse|streamable-http] [--port 8080] [--host 0.0
 |-----|---------|
 | `OPENREVIEW_KNOWLEDGE_PATH` | Directory hint for `search_test_examples`. The Dockerfile sets this to `/openreview-py` by default — bind-mount your local checkout there, or use `--build-arg CLONE_OPENREVIEW_PY=true` to bake an upstream clone into the image. The `tests/` subdir under this path is what `search_test_examples` indexes; if it doesn't exist, the tool returns a clear disabled message and the other two tools work unaffected. |
 | `OPENREVIEW_TESTS_PATH` | Explicit override for the `tests/` directory used by `search_test_examples`. Falls back to `{OPENREVIEW_KNOWLEDGE_PATH}/tests/`. |
+| `GITBOOK_API_KEY` | API key from your GitBook organization. Required to enable `search_docs` and `gitbook_ai_ask`. |
+| `GITBOOK_ORG_ID` | GitBook organization ID. Required to enable `search_docs`. |
+| `GITBOOK_SITE_ID` | GitBook site (documentation collection) ID. Required to enable `search_docs`. |
+
+The GitBook site ID is the site that hosts `docs.openreview.net`; the org ID is the GitBook organization that owns it. Ask the docs admin if you don't have them.
 
 ## Reusable Registration
 
