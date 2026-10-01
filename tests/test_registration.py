@@ -2,7 +2,9 @@
 
 import asyncio
 import os
+from unittest.mock import MagicMock, patch
 
+import pytest
 from fastmcp import FastMCP
 
 from openreview_mcp import register_knowledge_tools
@@ -71,6 +73,125 @@ class TestRegisterKnowledgeTools:
 
         result = handles["search_api"](query="post_note")
         assert "post_note_edit" in result
+
+
+class TestSearchDocs:
+    @pytest.fixture(autouse=True)
+    def setup_env(self, monkeypatch):
+        monkeypatch.setenv("GITBOOK_API_KEY", "test-key")
+        monkeypatch.setenv("GITBOOK_ORG_ID", "test-org")
+        monkeypatch.setenv("GITBOOK_SITE_ID", "test-site")
+
+    def _handles(self):
+        mcp = FastMCP("test")
+        return register_knowledge_tools(mcp)
+
+    def _mock_response(self, json_data=None, status_code=200, text=None):
+        resp = MagicMock()
+        resp.status_code = status_code
+        if json_data is not None:
+            resp.json.return_value = json_data
+        if text is not None:
+            resp.text = text
+        resp.raise_for_status.return_value = None
+        return resp
+
+    def test_post_constructs_url_auth_payload(self, monkeypatch):
+        posted = {}
+
+        def fake_post(url, headers=None, json=None, **kwargs):
+            posted["url"] = url
+            posted["headers"] = headers
+            posted["json"] = json
+            return self._mock_response({"items": []})
+
+        with patch("httpx.Client.post", side_effect=fake_post):
+            handles = self._handles()
+            out = handles["search_docs"](query="merge profiles")
+
+        assert "test-org" in posted["url"]
+        assert "test-site" in posted["url"]
+        assert posted["headers"]["Authorization"] == "Bearer test-key"
+        assert posted["json"]["query"] == "merge profiles"
+        assert posted["json"]["scope"] == {"mode": "default"}
+        assert "No matching docs pages found" in out
+
+    def test_page_result_includes_title_path_sections(self):
+        data = {
+            "items": [
+                {
+                    "title": "Merge Profiles",
+                    "id": "page-id",
+                    "score": 0.95,
+                    "pages": [
+                        {
+                            "title": "How to merge profiles",
+                            "path": "/profile/merge",
+                            "description": "Step-by-step guide",
+                            "sections": [{"body": "Contact support"}],
+                        }
+                    ],
+                }
+            ]
+        }
+
+        with patch("httpx.Client.post", return_value=self._mock_response(data)):
+            out = self._handles()["search_docs"](query="merge profiles")
+
+        assert "Merge Profiles" in out
+        assert "How to merge profiles" in out
+        assert "/profile/merge" in out
+        assert "Step-by-step guide" in out
+        assert "Contact support" in out
+
+    def test_record_result_includes_url_description(self):
+        data = {
+            "items": [
+                {
+                    "type": "record",
+                    "title": "API Status",
+                    "id": "rec-id",
+                    "score": 0.88,
+                    "url": "https://status.openreview.net",
+                    "description": "System status page",
+                }
+            ]
+        }
+
+        with patch("httpx.Client.post", return_value=self._mock_response(data)):
+            out = self._handles()["search_docs"](query="status")
+
+        assert "API Status" in out
+        assert "https://status.openreview.net" in out
+        assert "System status page" in out
+
+    def test_empty_results_returns_clear_message(self):
+        with patch("httpx.Client.post", return_value=self._mock_response({"items": []})):
+            out = self._handles()["search_docs"](query="xyz")
+
+        assert "No matching docs pages found" in out
+
+    def test_malformed_response_returns_error_string(self):
+        resp = self._mock_response(json_data={"unexpected": "shape"})
+        with patch("httpx.Client.post", return_value=resp):
+            out = self._handles()["search_docs"](query="foo")
+
+        assert "Found" not in out
+
+    def test_http_error_returns_error_string(self):
+        import httpx
+
+        request = httpx.Request("POST", "https://api.gitbook.com/v1/orgs/test-org/sites/test-site/search")
+        response = httpx.Response(500, request=request)
+        err = httpx.HTTPStatusError("server error", request=request, response=response)
+        resp = MagicMock()
+        resp.status_code = 500
+        resp.raise_for_status.side_effect = err
+
+        with patch("httpx.Client.post", return_value=resp):
+            out = self._handles()["search_docs"](query="foo")
+
+        assert "GitBook search returned an error: 500" in out
 
 
 class TestSearchTestExamplesTool:
