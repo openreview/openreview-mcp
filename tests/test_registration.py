@@ -201,6 +201,79 @@ class TestSearchDocs:
         assert "GitBook search returned an error: 500" in out
 
 
+class TestGitbookAiAsk:
+    @pytest.fixture(autouse=True)
+    def setup_env(self, monkeypatch):
+        monkeypatch.setenv("GITBOOK_API_KEY", "test-key")
+        monkeypatch.setenv("GITBOOK_ORG_ID", "test-org")
+        monkeypatch.setenv("GITBOOK_SITE_ID", "test-site")
+
+    def _handles(self):
+        mcp = FastMCP("test")
+        return register_knowledge_tools(mcp)
+
+    def _mock_get(self, text="", status_code=200):
+        resp = MagicMock()
+        resp.status_code = status_code
+        resp.text = text
+        resp.raise_for_status.return_value = None
+        return resp
+
+    def test_get_uses_query_param_and_headers(self):
+        got = {}
+
+        def fake_get(url, params=None, headers=None, **kwargs):
+            got["url"] = url
+            got["params"] = params
+            got["headers"] = headers
+            return self._mock_get(text="Answer here\n\n# Sources:\n- https://docs.openreview.net/x")
+
+        with patch("httpx.Client.get", side_effect=fake_get):
+            out = self._handles()["gitbook_ai_ask"](query="merge profiles")
+
+        assert got["url"] == "https://docs.openreview.net/.md"
+        assert got["params"] == {"ask": "merge profiles"}
+        assert got["headers"].get("Accept") == "text/markdown, text/plain, */*"
+        assert "Answer here" in out
+        assert "# Sources:" in out
+
+    def test_empty_query_returns_prompt(self):
+        out = self._handles()["gitbook_ai_ask"](query="")
+        assert "Provide a query" in out
+
+    def test_empty_body_returns_message(self):
+        with patch("httpx.Client.get", return_value=self._mock_get(text="  ")):
+            out = self._handles()["gitbook_ai_ask"](query="foo")
+        assert "No answer returned" in out
+
+    def test_http_error_returns_error_string(self):
+        import httpx
+
+        request = httpx.Request("GET", "https://docs.openreview.net/.md")
+        response = httpx.Response(503, request=request)
+        err = httpx.HTTPStatusError("server error", request=request, response=response)
+        resp = MagicMock()
+        resp.status_code = 503
+        resp.raise_for_status.side_effect = err
+
+        with patch("httpx.Client.get", return_value=resp):
+            out = self._handles()["gitbook_ai_ask"](query="foo")
+
+        assert "docs.openreview.net returned an error: 503" in out
+
+    def test_preserves_sources_when_truncating(self):
+        answer = "A" * 8500
+        sources = "\n\n# Sources:\n- https://docs.openreview.net/x"
+        body = answer + sources
+
+        with patch("httpx.Client.get", return_value=self._mock_get(text=body)):
+            out = self._handles()["gitbook_ai_ask"](query="long")
+
+        assert "# Sources:" in out
+        assert "Answer truncated" in out
+        assert len(out) <= 8000 + len("[Answer truncated due to length]") + 50
+
+
 class TestSearchTestExamplesTool:
     def test_disabled_message_when_no_tests_path(self, tmp_path, monkeypatch):
         """With no env var and a knowledge_path that has no tests/ subdir, the tool returns the disabled string."""
