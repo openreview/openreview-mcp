@@ -2,13 +2,13 @@
 
 import asyncio
 import os
+import re
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastmcp import FastMCP
 
 from openreview_mcp import register_knowledge_tools
-
 
 CORE_TOOLS = {
     "search_api",
@@ -161,12 +161,19 @@ class TestSearchDocs:
         with patch("httpx.Client.post", return_value=self._mock_response(data)):
             out = self._handles()["search_docs"](query="status")
 
+        from urllib.parse import urlparse
+
         assert "API Status" in out
-        assert "URL: https://status.openreview.net" in out
+        assert "URL:" in out
+        url_match = re.search(r"URL:\s+(\S+)", out)
+        assert url_match, "record URL not found in output"
+        assert urlparse(url_match.group(1)).netloc == "status.openreview.net"
         assert "System status page" in out
 
     def test_empty_results_returns_clear_message(self):
-        with patch("httpx.Client.post", return_value=self._mock_response({"items": []})):
+        with patch(
+            "httpx.Client.post", return_value=self._mock_response({"items": []})
+        ):
             out = self._handles()["search_docs"](query="xyz")
 
         assert "No matching docs pages found" in out

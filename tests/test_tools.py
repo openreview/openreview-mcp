@@ -1,10 +1,5 @@
 """Tests for the MCP knowledge tools via register_knowledge_tools."""
 
-import os
-import re
-from unittest.mock import MagicMock, patch
-from urllib.parse import urlparse
-
 import pytest
 from fastmcp import FastMCP
 
