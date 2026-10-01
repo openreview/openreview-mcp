@@ -162,7 +162,7 @@ class TestSearchDocs:
             out = self._handles()["search_docs"](query="status")
 
         assert "API Status" in out
-        assert "https://status.openreview.net" in out
+        assert "URL: https://status.openreview.net" in out
         assert "System status page" in out
 
     def test_empty_results_returns_clear_message(self):
