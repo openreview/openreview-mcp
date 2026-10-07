@@ -9,6 +9,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "fastmcp>=3.2",
+    "httpx>=0.27.0",
     "openreview-py @ git+https://github.com/openreview/openreview-py.git",
 ]
 
